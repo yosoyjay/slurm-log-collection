@@ -9,7 +9,7 @@
       {
         "streams": ["Custom-Text-Healthagent_Raw_CL"],
         "destinations": ["la-workspace"],
-        "outputStream": "Custom-Healthagent_Raw_CL",
+        "outputStream": "Custom-healthagent_raw_CL",
         "transformKql": "source"
       }
     ],

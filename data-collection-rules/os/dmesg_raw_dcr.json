@@ -9,7 +9,7 @@
       {
         "streams": ["Custom-Text-Dmesg_Raw_CL"],
         "destinations": ["la-workspace"],
-        "outputStream": "Custom-Dmesg_Raw_CL",
+        "outputStream": "Custom-dmesg_raw_CL",
         "transformKql": "source"
       }
     ],

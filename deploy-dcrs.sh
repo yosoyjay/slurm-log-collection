@@ -7,7 +7,7 @@
 set -e
 
 # Check if required environment variables are set
-if [ -z "$RESOURCE_GROUP" ] || [ -z "$SUBSCRIPTION_ID" ] || [ -z "$WORKSPACE_NAME" ] || [ -z "$WORKSPACE_RESOURCE_ID" ]; then
+if [ -z "$RESOURCE_GROUP" ] || [ -z "$SUBSCRIPTION_ID" ] || [ -z "$WORKSPACE_NAME" ]; then
     echo "Error: Required environment variables must be set"
     echo "Required variables:"
     echo "  RESOURCE_GROUP - Azure resource group name"
@@ -19,7 +19,6 @@ if [ -z "$RESOURCE_GROUP" ] || [ -z "$SUBSCRIPTION_ID" ] || [ -z "$WORKSPACE_NAM
     echo "  export RESOURCE_GROUP='your-resource-group'"
     echo "  export SUBSCRIPTION_ID='12345678-1234-1234-1234-123456789012'"
     echo "  export WORKSPACE_NAME='your-workspace-name'"
-    echo "  export WORKSPACE_RESOURCE_ID='/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/your-rg/providers/Microsoft.OperationalInsights/workspaces/your-workspace'"
     exit 1
 fi
 
@@ -27,11 +26,13 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DCR_DIR="$SCRIPT_DIR/data-collection-rules"
 
+# Define WORKSPACE_RESOURCE_ID
+export WORKSPACE_RESOURCE_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/{$RESOURCE_GROUP}/providers/Microsoft.OperationalInsights/workspaces/${WORKSPACE_NAME}"
+
 echo "Deploying Data Collection Rules to Azure Monitor"
 echo "Resource group: $RESOURCE_GROUP"
 echo "Subscription: $SUBSCRIPTION_ID"
 echo "Workspace: $WORKSPACE_NAME"
-echo
 
 # Function to update DCR template with actual values and deploy
 deploy_dcr() {

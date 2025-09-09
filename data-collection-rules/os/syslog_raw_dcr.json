@@ -9,7 +9,7 @@
       {
         "streams": ["Custom-Text-Syslog_Raw_CL"],
         "destinations": ["la-workspace"],
-        "outputStream": "Custom-Syslog_Raw_CL",
+        "outputStream": "Custom-syslog_raw_CL",
         "transformKql": "source"
       }
     ],

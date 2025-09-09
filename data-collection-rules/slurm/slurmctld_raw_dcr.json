@@ -3,7 +3,7 @@
   "dataFlows": [
     {
       "destinations": ["la-1790457638"],
-      "outputStream": "Custom-Slurmctld_Raw_CL",
+      "outputStream": "Custom-slurmctld_raw_CL",
       "streams": ["Custom-Text-Slurmctld_Raw_CL"],
       "transformKql": "source"
     }

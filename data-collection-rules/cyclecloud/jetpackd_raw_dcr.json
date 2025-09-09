@@ -9,7 +9,7 @@
       {
         "streams": ["Custom-Text-Jetpackd_Raw_CL"],
         "destinations": ["la-workspace"],
-        "outputStream": "Custom-Jetpackd_Raw_CL",
+        "outputStream": "Custom-jetpackd_raw_CL",
         "transformKql": "source"
       }
     ],
