@@ -1,0 +1,67 @@
+{
+  "dataCollectionEndpointId": "/subscriptions/75d1e0d5-9fed-4ae1-aec7-2ecc19de26fa/resourceGroups/MA_ccw-mon-frn2ddoyg73f4_centralus_managed/providers/Microsoft.Insights/dataCollectionEndpoints/ccw-mon-frn2ddoyg73f4",
+  "dataFlows": [
+    {
+      "destinations": ["la-1790457638"],
+      "outputStream": "Custom-Slurmctld_Raw_CL",
+      "streams": ["Custom-Text-Slurmctld_Raw_CL"],
+      "transformKql": "source"
+    }
+  ],
+  "dataSources": {
+    "logFiles": [
+      {
+        "filePatterns": ["/var/log/slurmctld/slurmctld.log"],
+        "format": "text",
+        "name": "Custom-Text-Slurmctld_Raw_CL",
+        "streams": ["Custom-Text-Slurmctld_Raw_CL"]
+      }
+    ]
+  },
+  "destinations": {
+    "logAnalytics": [
+      {
+        "name": "la-1790457638",
+        "workspaceId": "d9d5362d-95fc-4ab3-8d8c-b37371c01fb6",
+        "workspaceResourceId": "/subscriptions/75d1e0d5-9fed-4ae1-aec7-2ecc19de26fa/resourceGroups/bfl-hub-test/providers/Microsoft.OperationalInsights/workspaces/ccw-mon-frn2ddoyg73f4"
+      }
+    ]
+  },
+  "immutableId": "dcr-bf504f8b0be640cab67e2d4c2db68573",
+  "kind": "Linux",
+  "location": "centralus",
+  "name": "Slurmctld-Raw",
+  "resourceGroup": "bfl-hub-test",
+  "streamDeclarations": {
+    "Custom-Text-Slurmctld_Raw_CL": {
+      "columns": [
+        {
+          "name": "TimeGenerated",
+          "type": "datetime"
+        },
+        {
+          "name": "RawData",
+          "type": "string"
+        },
+        {
+          "name": "FilePath",
+          "type": "string"
+        },
+        {
+          "name": "Computer",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "systemData": {
+    "createdAt": "2025-09-08T23:41:17.6206099Z",
+    "createdBy": "lopezjesse@microsoft.com",
+    "createdByType": "User",
+    "lastModifiedAt": "2025-09-08T23:41:17.6206099Z",
+    "lastModifiedBy": "lopezjesse@microsoft.com",
+    "lastModifiedByType": "User"
+  },
+  "tags": {},
+  "type": "Microsoft.Insights/dataCollectionRules"
+}
