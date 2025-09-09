@@ -1,0 +1,57 @@
+{
+  "type": "Microsoft.Insights/dataCollectionRules",
+  "name": "slurmdb_raw_dcr",
+  "description": "DCR for ingesting slurmdbd.log from Slurm database daemon",
+  "location": "centralus",
+  "kind": "Linux",
+  "properties": {
+    "dataFlows": [
+      {
+        "streams": ["Custom-Text-Slurmdb_Raw_CL"],
+        "destinations": ["la-workspace"],
+        "outputStream": "Custom-slurmdb_raw_CL",
+        "transformKql": "source"
+      }
+    ],
+    "dataSources": {
+      "logFiles": [
+        {
+          "filePatterns": ["/var/log/slurm/slurmdbd.log"],
+          "format": "text",
+          "name": "Custom-Text-Slurmdb_Raw_CL",
+          "streams": ["Custom-Text-Slurmdb_Raw_CL"]
+        }
+      ]
+    },
+    "streamDeclarations": {
+      "Custom-Text-Slurmdb_Raw_CL": {
+        "columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime"
+          },
+          {
+            "name": "RawData",
+            "type": "string"
+          },
+          {
+            "name": "Computer",
+            "type": "string"
+          },
+          {
+            "name": "FilePath",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    "destinations": {
+      "logAnalytics": [
+        {
+          "name": "la-workspace",
+          "workspaceResourceId": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.OperationalInsights/workspaces/{workspace-name}"
+        }
+      ]
+    }
+  }
+}

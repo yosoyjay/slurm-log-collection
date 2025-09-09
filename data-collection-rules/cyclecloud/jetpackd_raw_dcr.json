@@ -1,0 +1,57 @@
+{
+  "type": "Microsoft.Insights/dataCollectionRules",
+  "name": "jetpackd_raw_dcr",
+  "description": "DCR for ingesting CycleCloud jetpackd.log from scheduler and nodes",
+  "location": "centralus",
+  "kind": "Linux",
+  "properties": {
+    "dataFlows": [
+      {
+        "streams": ["Custom-Text-Jetpackd_Raw_CL"],
+        "destinations": ["la-workspace"],
+        "outputStream": "Custom-jetpackd_raw_CL",
+        "transformKql": "source"
+      }
+    ],
+    "dataSources": {
+      "logFiles": [
+        {
+          "filePatterns": ["/opt/cycle/jetpack/logs/jetpackd.log"],
+          "format": "text",
+          "name": "Custom-Text-Jetpackd_Raw_CL",
+          "streams": ["Custom-Text-Jetpackd_Raw_CL"]
+        }
+      ]
+    },
+    "streamDeclarations": {
+      "Custom-Text-Jetpackd_Raw_CL": {
+        "columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime"
+          },
+          {
+            "name": "RawData",
+            "type": "string"
+          },
+          {
+            "name": "Computer",
+            "type": "string"
+          },
+          {
+            "name": "FilePath",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    "destinations": {
+      "logAnalytics": [
+        {
+          "name": "la-workspace",
+          "workspaceResourceId": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.OperationalInsights/workspaces/{workspace-name}"
+        }
+      ]
+    }
+  }
+}

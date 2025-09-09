@@ -1,0 +1,57 @@
+{
+  "type": "Microsoft.Insights/dataCollectionRules",
+  "name": "healthagent_raw_dcr",
+  "description": "DCR for ingesting AzSlurm healthagent.log from scheduler",
+  "location": "centralus",
+  "kind": "Linux",
+  "properties": {
+    "dataFlows": [
+      {
+        "streams": ["Custom-Text-Healthagent_Raw_CL"],
+        "destinations": ["la-workspace"],
+        "outputStream": "Custom-healthagent_raw_CL",
+        "transformKql": "source"
+      }
+    ],
+    "dataSources": {
+      "logFiles": [
+        {
+          "filePatterns": ["/opt/healthagent/healthagent.log"],
+          "format": "text",
+          "name": "Custom-Text-Healthagent_Raw_CL",
+          "streams": ["Custom-Text-Healthagent_Raw_CL"]
+        }
+      ]
+    },
+    "streamDeclarations": {
+      "Custom-Text-Healthagent_Raw_CL": {
+        "columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime"
+          },
+          {
+            "name": "RawData",
+            "type": "string"
+          },
+          {
+            "name": "Computer",
+            "type": "string"
+          },
+          {
+            "name": "FilePath",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    "destinations": {
+      "logAnalytics": [
+        {
+          "name": "la-workspace",
+          "workspaceResourceId": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.OperationalInsights/workspaces/{workspace-name}"
+        }
+      ]
+    }
+  }
+}
