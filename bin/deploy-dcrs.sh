@@ -91,17 +91,3 @@ deploy_dcr "$DCR_DIR/cyclecloud/healthagent_raw_dcr.json" "healthagent_raw_dcr" 
 
 echo "=== DCR Deployment Complete ==="
 echo
-echo "Next steps:"
-echo "1. Associate DCRs with your VMs using:"
-echo "   az monitor data-collection rule association create \\"
-echo "     --resource-group \$RESOURCE_GROUP \\"
-echo "     --association-name \"<association-name>\" \\"
-echo "     --rule-id \"/subscriptions/\$SUBSCRIPTION_ID/resourceGroups/\$RESOURCE_GROUP/providers/Microsoft.Insights/dataCollectionRules/<dcr-name>\" \\"
-echo "     --resource \"/subscriptions/\$SUBSCRIPTION_ID/resourceGroups/<vm-resource-group>/providers/Microsoft.Compute/virtualMachines/<vm-name>\""
-echo
-echo "2. Wait approximately 15 minutes for the first logs to appear in Log Analytics"
-echo
-echo "3. Query your logs using KQL in Log Analytics workspace:"
-echo "   slurmctld_raw_CL | limit 10"
-echo "   slurmd_raw_CL | limit 10"
-echo "   syslog_raw_CL | limit 10"

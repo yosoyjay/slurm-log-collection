@@ -114,33 +114,3 @@ echo "  syslog_raw_dcr - System logs"
 echo "  jetpack_raw_dcr - CycleCloud jetpack logs"
 echo "  jetpackd_raw_dcr - CycleCloud jetpack daemon logs"
 echo
-
-echo "=== Next Steps ==="
-echo "1. Wait approximately 15 minutes for log ingestion to begin"
-echo
-echo "2. Verify associations were created successfully:"
-echo "   az monitor data-collection rule association list --resource $VM_ID"
-echo "   az monitor data-collection rule association list --resource $VMSS_ID"
-echo
-echo "3. Check log ingestion in Log Analytics workspace using KQL queries:"
-echo "   # Scheduler logs"
-echo "   slurmctld_raw_CL | where Computer == '$SCHEDULER_VM_NAME' | take 5"
-echo "   slurmdb_raw_CL | where Computer == '$SCHEDULER_VM_NAME' | take 5"
-echo
-echo "   # Compute node logs (will show multiple Computer names for VMSS instances)"
-echo "   slurmd_raw_CL | take 5"
-echo "   dmesg_raw_CL | take 5"
-echo
-echo "   # System logs from all nodes"
-echo "   syslog_raw_CL | summarize count() by Computer"
-echo
-echo "   # Show VMSS instance names"
-echo "   slurmd_raw_CL | distinct Computer | sort by Computer asc"
-echo
-echo "4. If no logs appear after 15 minutes, check:"
-echo "   - Azure Monitor Agent status on VMs: systemctl status azuremonitoragent"
-echo "   - Log file permissions on VMs"
-echo "   - DCR association status in Azure portal"
-echo "   - VMSS instances are running and have Azure Monitor Agent installed"
-echo
-echo "DCR association script completed successfully"
