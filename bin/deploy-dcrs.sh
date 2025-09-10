@@ -24,7 +24,7 @@ fi
 
 # Set the script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DCR_DIR="$SCRIPT_DIR/data-collection-rules"
+DCR_DIR="$SCRIPT_DIR/../data-collection-rules"
 
 # Define WORKSPACE_RESOURCE_ID
 export WORKSPACE_RESOURCE_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/{$RESOURCE_GROUP}/providers/Microsoft.OperationalInsights/workspaces/${WORKSPACE_NAME}"
@@ -73,6 +73,7 @@ deploy_dcr() {
 
 # Deploy Slurm DCRs
 echo "=== Deploying Slurm Data Collection Rules ==="
+deploy_dcr "$DCR_DIR/slurm/slurmctld_raw_dcr.json" "slurmctld_raw_dcr" "DCR for Slurm controller daemon logs"
 deploy_dcr "$DCR_DIR/slurm/slurmd_raw_dcr.json" "slurmd_raw_dcr" "DCR for Slurm node daemon logs"
 deploy_dcr "$DCR_DIR/slurm/slurmdb_raw_dcr.json" "slurmdb_raw_dcr" "DCR for Slurm database daemon logs"
 deploy_dcr "$DCR_DIR/slurm/slurmrestd_raw_dcr.json" "slurmrestd_raw_dcr" "DCR for Slurm REST API daemon logs"
@@ -86,10 +87,7 @@ deploy_dcr "$DCR_DIR/os/dmesg_raw_dcr.json" "dmesg_raw_dcr" "DCR for kernel logs
 echo "=== Deploying CycleCloud Data Collection Rules ==="
 deploy_dcr "$DCR_DIR/cyclecloud/jetpack_raw_dcr.json" "jetpack_raw_dcr" "DCR for CycleCloud jetpack logs"
 deploy_dcr "$DCR_DIR/cyclecloud/jetpackd_raw_dcr.json" "jetpackd_raw_dcr" "DCR for CycleCloud jetpack daemon logs"
-
-# Deploy AzSlurm DCRs
-echo "=== Deploying AzSlurm Data Collection Rules ==="
-deploy_dcr "$DCR_DIR/azslurm/healthagent_raw_dcr.json" "healthagent_raw_dcr" "DCR for AzSlurm health agent logs"
+deploy_dcr "$DCR_DIR/cyclecloud/healthagent_raw_dcr.json" "healthagent_raw_dcr" "DCR for CycleCloud health agent logs"
 
 echo "=== DCR Deployment Complete ==="
 echo

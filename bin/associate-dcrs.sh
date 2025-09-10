@@ -71,7 +71,7 @@ echo
 create_dcr_association "slurmctld_raw_dcr" "$VM_ID" "slurmctld-${SCHEDULER_VM_NAME}-association" "Slurm controller daemon logs"
 create_dcr_association "slurmdb_raw_dcr" "$VM_ID" "slurmdb-${SCHEDULER_VM_NAME}-association" "Slurm database daemon logs"
 create_dcr_association "slurmrestd_raw_dcr" "$VM_ID" "slurmrestd-${SCHEDULER_VM_NAME}-association" "Slurm REST API daemon logs"
-create_dcr_association "healthagent_raw_dcr" "$VM_ID" "healthagent-${SCHEDULER_VM_NAME}-association" "AzSlurm health agent logs"
+create_dcr_association "healthagent_raw_dcr" "$VM_ID" "healthagent-${SCHEDULER_VM_NAME}-association" "CycleCloud health agent logs"
 
 # Scheduler + nodes DCRs (logs exist on both scheduler and nodes)
 create_dcr_association "syslog_raw_dcr" "$VM_ID" "syslog-${SCHEDULER_VM_NAME}-association" "System logs from scheduler"
@@ -102,7 +102,7 @@ echo "Scheduler VM ($SCHEDULER_VM_NAME):"
 echo "  slurmctld_raw_dcr - Slurm controller logs"
 echo "  slurmdb_raw_dcr - Slurm database logs"
 echo "  slurmrestd_raw_dcr - Slurm REST API logs"
-echo "  healthagent_raw_dcr - AzSlurm health agent logs"
+echo "  healthagent_raw_dcr - CycleCloud health agent logs"
 echo "  syslog_raw_dcr - System logs"
 echo "  jetpack_raw_dcr - CycleCloud jetpack logs"
 echo "  jetpackd_raw_dcr - CycleCloud jetpack daemon logs"

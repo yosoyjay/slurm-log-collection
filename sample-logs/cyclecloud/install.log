@@ -1,0 +1,10 @@
+2025-07-16 02:31:29,056 INFO     Changed file permissions for /opt/cycle/jetpack/system (0x750)
+2025-07-16 02:31:29,056 INFO     Initializing jetpack...
+2025-07-16 02:31:29,075 INFO     Making GET request to CycleServer at https://10.1.0.4:9443/cloud/api/node_status/59c6a9a1334c4da2a61a655d14067872?cluster=ccw-1-3
+2025-07-16 02:31:29,085 INFO     Jetpack connection to CycleCloud verified!
+2025-07-16 02:31:29,098 INFO     Making GET request to CycleServer at https://10.1.0.4:9443/cloud/api/node_status/59c6a9a1334c4da2a61a655d14067872?cluster=ccw-1-3&template=scheduler
+2025-07-16 02:31:29,258 INFO     Enabled jetpackd service
+2025-07-16 02:31:29,419 INFO     Enabled healthcheck service
+2025-07-16 02:31:29,540 INFO     Started jetpackd service
+2025-07-16 02:31:29,546 INFO     Started healthcheck service
+2025-07-16 02:31:29,546 INFO     Installation complete

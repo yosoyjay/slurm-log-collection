@@ -7,12 +7,22 @@
 | Slurm     | /var/log/slurmctld/slurmctld.log     | scheduler          | slurmctld_CL         | slurmctld_raw_CL     | slurmctld_raw_dcr      |
 | Slurm     | /var/log/slurmd/slurmd.log           | nodes              | slurmd_CL            | slurmd_raw_CL        | slurmd_raw_dcr         |
 | Slurm     | /var/log/slurmctld/slurmdbd.log      | scheduler          | slurmdb_CL           | slurmdb_raw_CL       | slurmdb_raw_dcr        |
-| Slurm     | slurmrestd.log                       | scheduler          | slurmrestd_CL        | slurmrestd_raw_CL    | slurmrestd_raw_dcr     |
+| Slurm     | /var/log/slurm/slurmrestd.log        | scheduler          | slurmrestd_CL        | slurmrestd_raw_CL    | slurmrestd_raw_dcr     |
 | CC        | /opt/cycle/jetpack/logs/jetpack.log  | scheduler (+nodes) | jetpack_CL           | jetpack_raw_CL       | jetpack_raw_dcr        |
 | CC        | /opt/cycle/jetpack/logs/jetpackd.log | scheduler (+nodes) | jetpackd_CL          | jetpackd_raw_CL      | jetpackd_raw_dcr       |
-| AzSlurm   | /opt/healthagent/healthagent.log     | scheduler          | healthagent_CL       | healthagent_raw_CL   | healthagent_raw_dcr    |
+| CC        | /opt/healthagent/healthagent.log     | scheduler          | healthagent_CL       | healthagent_raw_CL   | healthagent_raw_dcr    |
 | OS        | /var/log/dmesg                       | nodes              | dmesg_CL             | dmesg_raw_CL         | dmesg_raw_dcr          |
 | OS        | /var/log/syslog                      | scheduler (+nodes) | syslog_CL            | syslog_raw_CL        | syslog_raw_dcr         |
+
+## Naming Template
+
+The Data Collection Rules follow a consistent naming pattern:
+
+- **Log name**: `{service}.log` (e.g., `slurmd.log`)
+- **Pattern**: `{service}` (extracted from log name, e.g., `slurmd`)
+- **Table name**: `{pattern}_raw_CL` (e.g., `slurmd_raw_CL`)
+- **DCR file name**: `{pattern}_raw_dcr.json` (e.g., `slurmd_raw_dcr.json`)
+- **Stream**: `Custom-Text-{pattern}_raw_CL` (e.g., `Custom-Text-slurmd_raw_CL`)
 
 Note: The table name in Log Analytics is also the outputStream in the dataFlows defined in the data-collection-rule.
 
@@ -54,7 +64,7 @@ This creates the following raw data tables with standard schema:
 - `dmesg_raw_CL` - Kernel logs (/var/log/dmesg)
 - `jetpack_raw_CL` - CycleCloud jetpack logs
 - `jetpackd_raw_CL` - CycleCloud jetpack daemon logs
-- `healthagent_raw_CL` - AzSlurm health agent logs
+- `healthagent_raw_CL` - CycleCloud health agent logs
 
 **Standard Raw Table Schema:**
 ```
@@ -74,16 +84,15 @@ chmod +x deploy-dcrs.sh
 ```
 
 This deploys DCR JSON files from the `data-collection-rules/` directory:
-- `data-collection-rules/slurm/` - Slurm-related DCRs
-- `data-collection-rules/os/` - Operating system DCRs
-- `data-collection-rules/cyclecloud/` - CycleCloud DCRs
-- `data-collection-rules/azslurm/` - AzSlurm DCRs
+- `data-collection-rules/slurm/` - Slurm-related DCRs (slurmctld, slurmd, slurmdb, slurmrestd)
+- `data-collection-rules/os/` - Operating system DCRs (syslog, dmesg)
+- `data-collection-rules/cyclecloud/` - CycleCloud DCRs (jetpack, jetpackd, healthagent)
 
 #### Step 3: Associate DCRs with VMs
 
 Associate each DCR with the appropriate VMs:
 
-**For Scheduler VMs** (slurmctld, slurmdbd, slurmrestd, healthagent):
+**For Scheduler VMs** (slurmctld, slurmdbd, slurmrestd, and CycleCloud healthagent):
 ```bash
 # Example for slurmctld DCR
 az monitor data-collection rule association create \

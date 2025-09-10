@@ -7,7 +7,7 @@
   "properties": {
     "dataFlows": [
       {
-        "streams": ["Custom-Text-Dmesg_Raw_CL"],
+        "streams": ["Custom-Text-dmesg_raw_CL"],
         "destinations": ["la-workspace"],
         "outputStream": "Custom-dmesg_raw_CL",
         "transformKql": "source"
@@ -18,13 +18,13 @@
         {
           "filePatterns": ["/var/log/dmesg"],
           "format": "text",
-          "name": "Custom-Text-Dmesg_Raw_CL",
-          "streams": ["Custom-Text-Dmesg_Raw_CL"]
+          "name": "Custom-Text-dmesg_raw_CL",
+          "streams": ["Custom-Text-dmesg_raw_CL"]
         }
       ]
     },
     "streamDeclarations": {
-      "Custom-Text-Dmesg_Raw_CL": {
+      "Custom-Text-dmesg_raw_CL": {
         "columns": [
           {
             "name": "TimeGenerated",
