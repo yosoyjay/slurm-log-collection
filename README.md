@@ -4,9 +4,9 @@
 
 | component | file                                 | source             | table                | raw-table            | data-collection-rule   |
 |-----------|--------------------------------------|--------------------|----------------------|----------------------|------------------------|
-| Slurm     | slurmctld.log                        | scheduler          | slurmctld_CL         | slurmctld_raw_CL     | slurmctld_raw_dcr      |
-| Slurm     | slurmd.log                           | nodes              | slurmd_CL            | slurmd_raw_CL        | slurmd_raw_dcr         |
-| Slurm     | slurmdbd.log                         | scheduler          | slurmdb_CL           | slurmdb_raw_CL       | slurmdb_raw_dcr        |
+| Slurm     | /var/log/slurmctld/slurmctld.log     | scheduler          | slurmctld_CL         | slurmctld_raw_CL     | slurmctld_raw_dcr      |
+| Slurm     | /var/log/slurmd/slurmd.log           | nodes              | slurmd_CL            | slurmd_raw_CL        | slurmd_raw_dcr         |
+| Slurm     | /var/log/slurmctld/slurmdbd.log      | scheduler          | slurmdb_CL           | slurmdb_raw_CL       | slurmdb_raw_dcr        |
 | Slurm     | slurmrestd.log                       | scheduler          | slurmrestd_CL        | slurmrestd_raw_CL    | slurmrestd_raw_dcr     |
 | CC        | /opt/cycle/jetpack/logs/jetpack.log  | scheduler (+nodes) | jetpack_CL           | jetpack_raw_CL       | jetpack_raw_dcr        |
 | CC        | /opt/cycle/jetpack/logs/jetpackd.log | scheduler (+nodes) | jetpackd_CL          | jetpackd_raw_CL      | jetpackd_raw_dcr       |
@@ -20,7 +20,7 @@ Note: The table name in Log Analytics is also the outputStream in the dataFlows 
 
 ### Prerequisites
 
-1. **Azure Monitor Agent** must be installed and configured on all VMs
+1. **Azure Monitor Agent** must be installed and configured on all VMs and VMs + VMSS must have system identity assigned
 2. **Log Analytics Workspace** must be created and accessible
 3. **Required permissions** for creating DCRs and table associations
 4. **Environment variables** set (see `.env` file example below)
@@ -47,7 +47,7 @@ chmod +x create-tables.sh
 
 This creates the following raw data tables with standard schema:
 - `slurmctld_raw_CL` - Slurm controller daemon logs
-- `slurmd_raw_CL` - Slurm node daemon logs  
+- `slurmd_raw_CL` - Slurm node daemon logs
 - `slurmdb_raw_CL` - Slurm database daemon logs
 - `slurmrestd_raw_CL` - Slurm REST API daemon logs
 - `syslog_raw_CL` - System logs (/var/log/syslog)
@@ -60,7 +60,7 @@ This creates the following raw data tables with standard schema:
 ```
 TimeGenerated (datetime) - When the log entry was generated
 RawData (string) - The complete raw log line
-Computer (string) - Source computer/VM name  
+Computer (string) - Source computer/VM name
 FilePath (string) - Path to the source log file
 ```
 
@@ -111,10 +111,10 @@ Wait ~15 minutes for initial log ingestion, then verify in Log Analytics:
 
 ```kql
 // Check slurmctld logs
-slurmctld_raw_CL 
+slurmctld_raw_CL
 | take 10
 
-// Check slurmd logs  
+// Check slurmd logs
 slurmd_raw_CL
 | take 10
 
@@ -145,7 +145,7 @@ slurmctld_raw_CL
 
 **Parse system logs**:
 ```kql
-syslog_raw_CL  
+syslog_raw_CL
 | parse RawData with Timestamp " " Computer " " Process ": " Message
 | project TimeGenerated, Computer, Timestamp, Process, Message
 ```
@@ -209,7 +209,7 @@ az monitor data-collection rule create \
 
 **Slurm logs** (may vary by distribution):
 - `/var/log/slurm/slurmctld.log`
-- `/var/log/slurm/slurmd.log` 
+- `/var/log/slurm/slurmd.log`
 - `/var/log/slurm/slurmdbd.log`
 - `/var/log/slurm/slurmrestd.log`
 
@@ -220,7 +220,7 @@ az monitor data-collection rule create \
 
 **Application logs:**
 - `/opt/cycle/jetpack/logs/jetpack.log`
-- `/opt/cycle/jetpack/logs/jetpackd.log` 
+- `/opt/cycle/jetpack/logs/jetpackd.log`
 - `/opt/healthagent/healthagent.log`
 
 ## Data Flow Architecture
