@@ -16,7 +16,7 @@
     "dataSources": {
       "logFiles": [
         {
-          "filePatterns": ["/var/log/slurm/slurmdbd.log"],
+          "filePatterns": ["/var/log/slurmctld/slurmdbd.log"],
           "format": "text",
           "name": "Custom-Text-Slurmdb_Raw_CL",
           "streams": ["Custom-Text-Slurmdb_Raw_CL"]
