@@ -9,7 +9,7 @@
       {
         "streams": ["Custom-Text-slurmctld_raw_CL"],
         "destinations": ["la-workspace"],
-        "outputStream": "Custom-slurmctld_raw_CL",
+        "outputStream": "Custom-Slurmctld_Raw_CL",
         "transformKql": "source"
       }
     ],

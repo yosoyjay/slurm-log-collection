@@ -1,13 +1,14 @@
-# Slurm cluster log collection
+# CycleCloud Slurm cluster log collection
 
-## Data to be collected and forwarded to Azure Monitor
+## Data to be collected and forwarded to Azure Monitor via Azure Monitor Agent and Data Collection Rules (DCRs).
 
-| component | file                                 | source             | table                | raw-table            | data-collection-rule   |
+| component | file(s)                              | source             | table                | raw-table            | data-collection-rule   |
 |-----------|--------------------------------------|--------------------|----------------------|----------------------|------------------------|
 | Slurm     | /var/log/slurmctld/slurmctld.log     | scheduler          | slurmctld_CL         | slurmctld_raw_CL     | slurmctld_raw_dcr      |
 | Slurm     | /var/log/slurmd/slurmd.log           | nodes              | slurmd_CL            | slurmd_raw_CL        | slurmd_raw_dcr         |
 | Slurm     | /var/log/slurmctld/slurmdbd.log      | scheduler          | slurmdb_CL           | slurmdb_raw_CL       | slurmdb_raw_dcr        |
 | Slurm     | /var/log/slurm/slurmrestd.log        | scheduler          | slurmrestd_CL        | slurmrestd_raw_CL    | slurmrestd_raw_dcr     |
+| Slurm     | /shared/slurm-logs/*                 | nodes              | slurmjobs_CL         | slurmjobs_raw_CL     | slurmjobs_raw_dcr      |
 | CC        | /opt/cycle/jetpack/logs/jetpack.log  | scheduler (+nodes) | jetpack_CL           | jetpack_raw_CL       | jetpack_raw_dcr        |
 | CC        | /opt/cycle/jetpack/logs/jetpackd.log | scheduler (+nodes) | jetpackd_CL          | jetpackd_raw_CL      | jetpackd_raw_dcr       |
 | CC        | /opt/healthagent/healthagent.log     | scheduler          | healthagent_CL       | healthagent_raw_CL   | healthagent_raw_dcr    |
@@ -30,18 +31,26 @@ Note: The table name in Log Analytics is also the outputStream in the dataFlows 
 
 ### Prerequisites
 
-1. **Azure Monitor Agent** must be installed and configured on all VMs and VMs + VMSS must have system identity assigned
-2. **Log Analytics Workspace** must be created and accessible
-3. **Required permissions** for creating DCRs and table associations
-4. **Environment variables** set (see `.env` file example below)
+1. **Azure Monitor Agent** must be installed and configured on all VMs and VMSS
+2. **VM and VMSS** must have system identity assigned otherwise Azure Monitor Agent will not work
+3. **Log Analytics Workspace** must be created and accessible
+4. **Azure priviliges** for creating DCRs and table associations must be granted (Monitoring Contributor role)
+5. **Environment variables** set (see `.env` file example below)
 
 ### Required Environment Variables
 
+See `.env` file for example values:
 ```bash
-export RESOURCE_GROUP="your-resource-group"
-export SUBSCRIPTION_ID="12345678-1234-1234-1234-123456789012"
-export WORKSPACE_NAME="your-log-analytics-workspace"
-export WORKSPACE_RESOURCE_ID="/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/your-resource-group/providers/Microsoft.OperationalInsights/workspaces/your-workspace"
+export RESOURCE_GROUP=resource-group-name
+export WORKSPACE_NAME=job-analytics-workspace-name
+export SLURMCTLD_TABLE_NAME=slurmctld-table-name_CL
+export REGION=centralus
+export SUBSCRIPTION_ID=00000000-0000-0000-0000-000000000000
+export VMSS_RG=vmms-resource-group-name
+export VMSS_NAME=vmss-name
+export VMSS_ID=/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vmms-resource-group-name/providers/Microsoft.Compute/virtualMachineScaleSets/vmss-name
+export DCR_ID=/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resource-group-name/providers/Microsoft.Insights/dataCollectionRules/dcr-name
+export VM_ID=/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resource-group-name/providers/Microsoft.Compute/virtualMachines/vm-name
 ```
 
 ### Step-by-Step Setup
@@ -51,7 +60,6 @@ export WORKSPACE_RESOURCE_ID="/subscriptions/12345678-1234-1234-1234-12345678901
 Run the provided script to create all required tables:
 
 ```bash
-chmod +x create-tables.sh
 ./create-tables.sh
 ```
 
@@ -157,16 +165,6 @@ slurmctld_raw_CL
 syslog_raw_CL
 | parse RawData with Timestamp " " Computer " " Process ": " Message
 | project TimeGenerated, Computer, Timestamp, Process, Message
-```
-
-### Transformation DCRs (Future Enhancement)
-
-For processed tables (e.g., `slurmctld_CL`), create transformation DCRs with KQL parsing:
-
-```json
-{
-  "transformKql": "source | parse RawData with '[' Timestamp '] ' Level ': ' Component ': ' Message | project TimeGenerated, Computer, Timestamp, Level, Component, Message"
-}
 ```
 
 ## Manual Setup (Alternative to Scripts)

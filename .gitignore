@@ -1,8 +1,12 @@
 # Agents, etc.
 CLAUDE.md
-AGENT_TODO.md
 AGENTS.md
-DEPLOYMENT_SUMMARY.md
 
 # Env var
 .env
+
+# Other
+scratch.txt
+*~
+*.swp
+*.swo
