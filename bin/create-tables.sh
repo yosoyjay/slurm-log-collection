@@ -57,9 +57,9 @@ echo "=== Creating CycleCloud Log Tables ==="
 create_raw_table "jetpack_raw_CL" "Raw logs from CycleCloud jetpack.log"
 create_raw_table "jetpackd_raw_CL" "Raw logs from CycleCloud jetpackd.log"
 
-# Create tables for AzSlurm logs
-echo "=== Creating AzSlurm Log Tables ==="
-create_raw_table "healthagent_raw_CL" "Raw logs from AzSlurm healthagent.log"
+# Create tables for CycleCloud health agent logs
+echo "=== Creating CycleCloud Health Agent Log Tables ==="
+create_raw_table "healthagent_raw_CL" "Raw logs from CycleCloud healthagent.log"
 
 echo "=== Table Creation Complete ==="
 echo
@@ -79,4 +79,4 @@ echo "- syslog_raw_CL     (System logs)"
 echo "- dmesg_raw_CL      (Kernel logs)"
 echo "- jetpack_raw_CL    (CycleCloud jetpack)"
 echo "- jetpackd_raw_CL   (CycleCloud jetpack daemon)"
-echo "- healthagent_raw_CL (AzSlurm health agent)"
+echo "- healthagent_raw_CL (CycleCloud health agent)"

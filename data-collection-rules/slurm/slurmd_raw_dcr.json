@@ -7,7 +7,7 @@
   "properties": {
     "dataFlows": [
       {
-        "streams": ["Custom-Text-Slurmd_Raw_CL"],
+        "streams": ["Custom-Text-slurmd_raw_CL"],
         "destinations": ["la-workspace"],
         "outputStream": "Custom-slurmd_raw_CL",
         "transformKql": "source"
@@ -18,13 +18,13 @@
         {
           "filePatterns": ["/var/log/slurmd/slurmd.log"],
           "format": "text",
-          "name": "Custom-Text-Slurmd_Raw_CL",
-          "streams": ["Custom-Text-Slurmd_Raw_CL"]
+          "name": "Custom-Text-slurmd_raw_CL",
+          "streams": ["Custom-Text-slurmd_raw_CL"]
         }
       ]
     },
     "streamDeclarations": {
-      "Custom-Text-Slurmd_Raw_CL": {
+      "Custom-Text-slurmd_raw_CL": {
         "columns": [
           {
             "name": "TimeGenerated",

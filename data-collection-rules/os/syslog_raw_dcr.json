@@ -7,7 +7,7 @@
   "properties": {
     "dataFlows": [
       {
-        "streams": ["Custom-Text-Syslog_Raw_CL"],
+        "streams": ["Custom-Text-syslog_raw_CL"],
         "destinations": ["la-workspace"],
         "outputStream": "Custom-syslog_raw_CL",
         "transformKql": "source"
@@ -18,13 +18,13 @@
         {
           "filePatterns": ["/var/log/syslog"],
           "format": "text",
-          "name": "Custom-Text-Syslog_Raw_CL",
-          "streams": ["Custom-Text-Syslog_Raw_CL"]
+          "name": "Custom-Text-syslog_raw_CL",
+          "streams": ["Custom-Text-syslog_raw_CL"]
         }
       ]
     },
     "streamDeclarations": {
-      "Custom-Text-Syslog_Raw_CL": {
+      "Custom-Text-syslog_raw_CL": {
         "columns": [
           {
             "name": "TimeGenerated",

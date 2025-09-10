@@ -1,0 +1,10 @@
+2025-07-16 02:36:16,851 INFO     Cluster-init script /mnt/cluster-init/monitoring/default/scripts/60_slurm_exporter.sh ran successfully!
+2025-07-16 02:36:16,851 INFO     Completed cluster-init!
+2025-07-16 02:36:31,929 INFO     Making POST request to CycleServer at https://10.1.0.4:9443/clusterlink/messages
+2025-07-16 02:36:31,938 INFO     Making POST request to CycleServer at https://10.1.0.4:9443/clusterlink/messages
+2025-07-16 02:36:31,957 INFO     Making POST request to CycleServer at https://10.1.0.4:9443/clusterlink/messages
+2025-07-16 02:36:31,965 INFO     Converge succeeded
+2025-08-12 20:34:33,637 INFO     Making POST request to CycleServer at https://10.1.0.4:9443/clusterlink/messages
+2025-08-12 20:59:25,895 INFO     Making POST request to CycleServer at https://10.1.0.4:9443/clusterlink/messages
+2025-09-09 17:49:54,604 INFO     Making POST request to CycleServer at https://10.1.0.4:9443/clusterlink/messages
+2025-09-09 17:50:32,178 INFO     Making POST request to CycleServer at https://10.1.0.4:9443/clusterlink/messages

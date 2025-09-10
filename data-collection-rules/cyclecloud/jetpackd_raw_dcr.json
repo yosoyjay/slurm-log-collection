@@ -7,7 +7,7 @@
   "properties": {
     "dataFlows": [
       {
-        "streams": ["Custom-Text-Jetpackd_Raw_CL"],
+        "streams": ["Custom-Text-jetpackd_raw_CL"],
         "destinations": ["la-workspace"],
         "outputStream": "Custom-jetpackd_raw_CL",
         "transformKql": "source"
@@ -18,13 +18,13 @@
         {
           "filePatterns": ["/opt/cycle/jetpack/logs/jetpackd.log"],
           "format": "text",
-          "name": "Custom-Text-Jetpackd_Raw_CL",
-          "streams": ["Custom-Text-Jetpackd_Raw_CL"]
+          "name": "Custom-Text-jetpackd_raw_CL",
+          "streams": ["Custom-Text-jetpackd_raw_CL"]
         }
       ]
     },
     "streamDeclarations": {
-      "Custom-Text-Jetpackd_Raw_CL": {
+      "Custom-Text-jetpackd_raw_CL": {
         "columns": [
           {
             "name": "TimeGenerated",
