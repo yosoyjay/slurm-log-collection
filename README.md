@@ -8,7 +8,7 @@
 | Slurm     | /var/log/slurmd/slurmd.log           | nodes              | slurmd_CL            | slurmd_raw_CL        | slurmd_raw_dcr         |
 | Slurm     | /var/log/slurmctld/slurmdbd.log      | scheduler          | slurmdb_CL           | slurmdb_raw_CL       | slurmdb_raw_dcr        |
 | Slurm     | /var/log/slurm/slurmrestd.log        | scheduler          | slurmrestd_CL        | slurmrestd_raw_CL    | slurmrestd_raw_dcr     |
-| Slurm     | /shared/slurm-logs/*                 | nodes              | slurmjobs_CL         | slurmjobs_raw_CL     | slurmjobs_raw_dcr      |
+| Slurm     | /shared/slurm-logs/*                 | scheduler          | slurmjobs_CL         | slurmjobs_raw_CL     | slurmjobs_raw_dcr      |
 | CC        | /opt/cycle/jetpack/logs/jetpack.log  | scheduler (+nodes) | jetpack_CL           | jetpack_raw_CL       | jetpack_raw_dcr        |
 | CC        | /opt/cycle/jetpack/logs/jetpackd.log | scheduler (+nodes) | jetpackd_CL          | jetpackd_raw_CL      | jetpackd_raw_dcr       |
 | CC        | /opt/healthagent/healthagent.log     | scheduler          | healthagent_CL       | healthagent_raw_CL   | healthagent_raw_dcr    |
@@ -19,13 +19,78 @@
 
 The Data Collection Rules follow a consistent naming pattern:
 
-- **Log name**: `{service}.log` (e.g., `slurmd.log`)
-- **Pattern**: `{service}` (extracted from log name, e.g., `slurmd`)
-- **Table name**: `{pattern}_raw_CL` (e.g., `slurmd_raw_CL`)
-- **DCR file name**: `{pattern}_raw_dcr.json` (e.g., `slurmd_raw_dcr.json`)
-- **Stream**: `Custom-Text-{pattern}_raw_CL` (e.g., `Custom-Text-slurmd_raw_CL`)
+- Log name: `{service}.log` (e.g., `slurmd.log`)
+- Pattern: `{service}` (extracted from log name, e.g., `slurmd`)
+- Table name: `{pattern}_raw_CL` (e.g., `slurmd_raw_CL`)
+- DCR file name: `{pattern}_raw_dcr.json` (e.g., `slurmd_raw_dcr.json`)
+- Stream: `Custom-Text-{pattern}_raw_CL` (e.g., `Custom-Text-slurmd_raw_CL`)
 
 Note: The table name in Log Analytics is also the outputStream in the dataFlows defined in the data-collection-rule.
+
+## Slurm Job Archive System
+
+The Slurm job archive system automatically captures and stores job-related files for analysis and debugging. This system uses prolog and epilog scripts that run on compute nodes to archive:
+
+- Job submission scripts:(`job_{jobid}.sh`) - The original sbatch script submitted by users
+- Environment variables: (`job_{jobid}.env`) - Complete environment at job execution time
+- Job output logs: (`job_{jobid}.out`) - Standard output from job execution
+- Job error logs: (`job_{jobid}.err`) - Standard error from job execution
+
+### Archive Location and Structure
+
+All job files are stored in `/shared/slurm-logs/{username}/` with the following naming convention:
+```
+/shared/slurm-logs/
+├── user1/
+│   ├── job_12345.sh    # Job submission script
+│   ├── job_12345.env   # Environment variables
+│   ├── job_12345.out   # Standard output
+│   ├── job_12345.err   # Standard error
+│   └── job_12346.*     # Next job files
+└── user2/
+    └── job_12347.*     # Another user's jobs
+```
+
+### Prolog/Epilog Script Configuration
+
+The archive system requires configuring Slurm prolog and epilog scripts, e.g. adding them to `/etc/slurm/{epilog,prolog}.d/` or directly in `slurm.conf`.
+
+### Log Ingestion via Azure Monitor
+
+The archived job files are ingested into Azure Monitor using:
+- DCR: `slurmjobs_raw_dcr` - Monitors `/shared/slurm-logs/*/*`
+- Table: `slurmjobs_raw_CL` - Stores raw file content with standard schema
+- Association: Applied to scheduler VM where job archive files are accessible
+
+### Sample KQL Queries
+
+**View recent job submissions:**
+```kql
+slurmjobs_raw_CL
+| where FilePath contains ".sh"
+| where TimeGenerated > ago(1d)
+| project TimeGenerated, Computer, FilePath, RawData
+| order by TimeGenerated desc
+```
+
+**Analyze job failures:**
+```kql
+slurmjobs_raw_CL
+| where FilePath contains ".err"
+| where RawData contains "error" or RawData contains "failed"
+| project TimeGenerated, Computer, FilePath, RawData
+| order by TimeGenerated desc
+```
+
+**Extract job environment variables:**
+```kql
+slurmjobs_raw_CL
+| where FilePath contains ".env"
+| parse FilePath with * "/job_" JobId:string ".env"
+| parse RawData with EnvVar "=" EnvValue
+| where EnvVar startswith "SLURM_"
+| project JobId, EnvVar, EnvValue, TimeGenerated
+```
 
 ## Quick Start Guide
 
@@ -68,6 +133,7 @@ This creates the following raw data tables with standard schema:
 - `slurmd_raw_CL` - Slurm node daemon logs
 - `slurmdb_raw_CL` - Slurm database daemon logs
 - `slurmrestd_raw_CL` - Slurm REST API daemon logs
+- `slurmjobs_raw_CL` - Slurm job archive files (scripts, env, output, errors)
 - `syslog_raw_CL` - System logs (/var/log/syslog)
 - `dmesg_raw_CL` - Kernel logs (/var/log/dmesg)
 - `jetpack_raw_CL` - CycleCloud jetpack logs
@@ -92,35 +158,29 @@ chmod +x deploy-dcrs.sh
 ```
 
 This deploys DCR JSON files from the `data-collection-rules/` directory:
-- `data-collection-rules/slurm/` - Slurm-related DCRs (slurmctld, slurmd, slurmdb, slurmrestd)
+- `data-collection-rules/slurm/` - Slurm-related DCRs (slurmctld, slurmd, slurmdb, slurmrestd, slurmjobs)
 - `data-collection-rules/os/` - Operating system DCRs (syslog, dmesg)
 - `data-collection-rules/cyclecloud/` - CycleCloud DCRs (jetpack, jetpackd, healthagent)
 
 #### Step 3: Associate DCRs with VMs
 
-Associate each DCR with the appropriate VMs:
+Associate all DCRs with the appropriate VMs using the provided script:
 
-**For Scheduler VMs** (slurmctld, slurmdbd, slurmrestd, and CycleCloud healthagent):
 ```bash
-# Example for slurmctld DCR
-az monitor data-collection rule association create \
-    --resource-group $RESOURCE_GROUP \
-    --association-name "slurmctld-scheduler-association" \
-    --rule-id "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Insights/dataCollectionRules/slurmctld_raw_dcr" \
-    --resource "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$VM_RESOURCE_GROUP/providers/Microsoft.Compute/virtualMachines/$SCHEDULER_VM_NAME"
+./bin/associate-dcrs.sh
 ```
 
-**For Compute Node VMs** (slurmd, syslog, dmesg):
-```bash
-# Example for slurmd DCR on compute nodes
-for vm in $COMPUTE_VM_NAMES; do
-    az monitor data-collection rule association create \
-        --resource-group $RESOURCE_GROUP \
-        --association-name "slurmd-${vm}-association" \
-        --rule-id "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Insights/dataCollectionRules/slurmd_raw_dcr" \
-        --resource "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$VM_RESOURCE_GROUP/providers/Microsoft.Compute/virtualMachines/$vm"
-done
-```
+This script automatically:
+- Associates scheduler-specific DCRs with the scheduler VM (VM_ID from .env)
+- Associates compute-node DCRs with the compute VMSS (VMSS_ID from .env)
+- Associates shared DCRs (syslog, jetpack, etc.) with both scheduler and compute nodes
+- Provides detailed output showing which DCRs are associated with which resources
+
+**Required environment variables:**
+- `RESOURCE_GROUP` - Resource group where DCRs are deployed
+- `SUBSCRIPTION_ID` - Azure subscription ID
+- `VM_ID` - Full resource ID of the scheduler VM
+- `VMSS_ID` - Full resource ID of the compute nodes VMSS
 
 #### Step 4: Verify Log Ingestion
 
@@ -133,6 +193,10 @@ slurmctld_raw_CL
 
 // Check slurmd logs
 slurmd_raw_CL
+| take 10
+
+// Check slurmjobs logs (job archives)
+slurmjobs_raw_CL
 | take 10
 
 // Check system logs
@@ -194,24 +258,6 @@ az monitor data-collection rule create \
     --rule-file data-collection-rules/slurm/slurmctld_raw_dcr.json
 ```
 
-## Troubleshooting
-
-### Common Issues
-
-1. **No logs appearing after 15+ minutes:**
-   - Verify Azure Monitor Agent is running: `sudo systemctl status azuremonitoragent`
-   - Check DCR association: `az monitor data-collection rule association list`
-   - Verify file paths exist on VMs and are readable
-
-2. **Permission errors:**
-   - Ensure service principal has `Monitoring Contributor` role
-   - Verify `Log Analytics Contributor` role for table creation
-
-3. **DCR deployment failures:**
-   - Check JSON syntax in DCR files
-   - Verify workspace resource ID format
-   - Confirm subscription and resource group names
-
 ### Log File Locations
 
 **Slurm logs** (may vary by distribution):
@@ -243,15 +289,6 @@ az monitor data-collection rule create \
                                                │  Tables (KQL)       │
                                                └─────────────────────┘
 ```
-
-## Next Steps
-
-1. **Implement processed tables** with KQL transformations for structured data
-2. **Create alerting rules** for critical log patterns (errors, failures)
-3. **Build dashboards** for Slurm cluster monitoring
-4. **Set up automated log retention** policies
-5. **Integrate with MCP servers** for AI agent interactions
-
 
 ## Hackathon connection
 

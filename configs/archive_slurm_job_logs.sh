@@ -1,5 +1,6 @@
 #!/bin/bash
 # Archive job logs from stdout and stderr to centralized location from job head node.
+# - Likely needs to be run from epliog to have permissions to write to shared location.
 # Template: job_{jobid}.{out,err}
 
 # Configuration
@@ -8,11 +9,13 @@ LOG_PATH="/var/log/slurmd/epilog.log"
 
 # Logging function (project template)
 log() {
+    local level="$1"; shift
     local msg="$*"
     local ts
     ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     local script="${BASH_SOURCE[1]##*/}"
-    echo "$ts $script:$lineno $msg" >> "$LOG_PATH"
+    local lineno="${BASH_LINENO[0]}"
+    echo "$ts $level $script:$lineno $msg" >> "$LOG_PATH"
 }
 
 # Resolve Slurm template variables in log file paths

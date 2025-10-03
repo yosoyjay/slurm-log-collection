@@ -1,0 +1,57 @@
+{
+  "type": "Microsoft.Insights/dataCollectionRules",
+  "name": "slurmjobs_raw_dcr",
+  "description": "DCR for ingesting Slurm job archive logs from /shared/slurm-logs/",
+  "location": "centralus",
+  "kind": "Linux",
+  "properties": {
+    "dataFlows": [
+      {
+        "streams": ["Custom-Text-slurmjobs_raw_CL"],
+        "destinations": ["la-workspace"],
+        "outputStream": "Custom-slurmjobs_raw_CL",
+        "transformKql": "source"
+      }
+    ],
+    "dataSources": {
+      "logFiles": [
+        {
+          "filePatterns": ["/shared/slurm-logs/*"],
+          "format": "text",
+          "name": "Custom-Text-slurmjobs_raw_CL",
+          "streams": ["Custom-Text-slurmjobs_raw_CL"]
+        }
+      ]
+    },
+    "streamDeclarations": {
+      "Custom-Text-slurmjobs_raw_CL": {
+        "columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime"
+          },
+          {
+            "name": "RawData",
+            "type": "string"
+          },
+          {
+            "name": "Computer",
+            "type": "string"
+          },
+          {
+            "name": "FilePath",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    "destinations": {
+      "logAnalytics": [
+        {
+          "name": "la-workspace",
+          "workspaceResourceId": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.OperationalInsights/workspaces/{workspace-name}"
+        }
+      ]
+    }
+  }
+}

@@ -8,11 +8,13 @@ LOG_PATH="/var/log/slurmd/prolog.log"
 
 # Logging function (project template)
 log() {
+    local level="$1"; shift
     local msg="$*"
     local ts
     ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     local script="${BASH_SOURCE[1]##*/}"
-    echo "$ts $script:$lineno $msg" >> "$LOG_PATH"
+    local lineno="${BASH_LINENO[0]}"
+    echo "$ts $level $script:$lineno $msg" >> "$LOG_PATH"
 }
 
 # Archive job script to centralized location
