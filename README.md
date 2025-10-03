@@ -96,13 +96,15 @@ slurmjobs_raw_CL
 
 ### Prerequisites
 
-1. **Azure Monitor Agent** must be installed and configured on all VMs and VMSS
-2. **VM and VMSS** must have system identity assigned otherwise Azure Monitor Agent will not work
-3. **Log Analytics Workspace** must be created and accessible
-4. **Azure priviliges** for creating DCRs and table associations must be granted (Monitoring Contributor role)
-5. **Environment variables** set (see `.env` file example below)
+1. Azure Monitor Agent must be installed and configured on all VMs and VMSS
+2. VM and VMSS must have system identity assigned otherwise Azure Monitor Agent will not work
+3. Log Analytics Workspace must be created and accessible
+4. Azure priviliges for creating DCRs and table associations must be granted (Monitoring Contributor role)
+5. Environment variables set (see `.env` file example below)
 
 ### Required Environment Variables
+
+Ensure the following environment variables are set in your shell.
 
 See `.env` file for example values:
 ```bash
@@ -140,7 +142,7 @@ This creates the following raw data tables with standard schema:
 - `jetpackd_raw_CL` - CycleCloud jetpack daemon logs
 - `healthagent_raw_CL` - CycleCloud health agent logs
 
-**Standard Raw Table Schema:**
+Standard Raw Table Schema:
 ```
 TimeGenerated (datetime) - When the log entry was generated
 RawData (string) - The complete raw log line
@@ -175,12 +177,6 @@ This script automatically:
 - Associates compute-node DCRs with the compute VMSS (VMSS_ID from .env)
 - Associates shared DCRs (syslog, jetpack, etc.) with both scheduler and compute nodes
 - Provides detailed output showing which DCRs are associated with which resources
-
-**Required environment variables:**
-- `RESOURCE_GROUP` - Resource group where DCRs are deployed
-- `SUBSCRIPTION_ID` - Azure subscription ID
-- `VM_ID` - Full resource ID of the scheduler VM
-- `VMSS_ID` - Full resource ID of the compute nodes VMSS
 
 #### Step 4: Verify Log Ingestion
 
@@ -258,51 +254,42 @@ az monitor data-collection rule create \
     --rule-file data-collection-rules/slurm/slurmctld_raw_dcr.json
 ```
 
-### Log File Locations
+## Logging asks
 
-**Slurm logs** (may vary by distribution):
-- `/var/log/slurm/slurmctld.log`
-- `/var/log/slurm/slurmd.log`
-- `/var/log/slurm/slurmdbd.log`
-- `/var/log/slurm/slurmrestd.log`
+The requests logging structure has the following structure that has some incompatibilities with Azure Monitor Agent and DCRs due to the inability to use globs or wildcards in file paths.
 
-**System logs:**
-- `/var/log/syslog` (Debian/Ubuntu)
-- `/var/log/messages` (RHEL/CentOS - update DCR if needed)
-- `/var/log/dmesg`
+  | Log Category             | Source                                                                                           | Written To                                                                  |
+  |--------------------------|--------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
+  | NVIDIA-SMI Monitoring    | nvidia-smi command (every 3 seconds)                                                             | ${LOG_DIR}/nvidia_smi/smi_${HOSTNAME}.log                                   |
+  | System - CPU             | lscpu, /proc/cpuinfo, uptime, /proc/loadavg                                                      | ${SYSTEM_LOG_DIR}/cpu_info_${HOSTNAME}.log                                  |
+  | System - Memory          | free -h, /proc/meminfo, numactl --hardware                                                       | ${SYSTEM_LOG_DIR}/mem_info_${HOSTNAME}.log                                  |
+  | System - PCI/GPU         | lspci, NVIDIA PCI device details                                                                 | ${SYSTEM_LOG_DIR}/pci_info_${HOSTNAME}.log                                  |
+  | System - Network         | ip addr, ip route, ibstat, netstat                                                               | ${SYSTEM_LOG_DIR}/network_info_${HOSTNAME}.log                              |
+  | System - Kernel          | uname -a, dmesg, lsmod, modinfo nvidia                                                           | ${SYSTEM_LOG_DIR}/kernel_${HOSTNAME}.log                                    |
+  | System - Processes       | ps aux, pstree, Python processes                                                                 | ${SYSTEM_LOG_DIR}/process_info_${HOSTNAME}.log                              |
+  | System - Continuous      | Memory, load average, top processes (every 30s)                                                  | ${SYSTEM_LOG_DIR}/continuous_monitor_${HOSTNAME}.log                        |
+  | NCCL Debug               | NCCL library debug output (per rank)                                                             | ${NCCL_DEBUG_LOGS_DIR}/slurm-job-id_${SLURM_JOB_ID}.host_%h.rank_%p.log     |
+  | NCCL RAS                 | NCCL RAS tool, environment variables, nvlink status, GPU errors                                  | ${NCCL_RAS_LOG_DIR}/ncclras_${HOSTNAME}.log                                 |
+  | GDB - Process List       | Python/torch process discovery                                                                   | ${CPU_GDB_LOG_DIR}/python_processes_${HOSTNAME}.log                         |
+  | GDB - Trace Log          | GDB execution log                                                                                | ${CPU_GDB_LOG_DIR}/gdb_trace_${HOSTNAME}.log                                |
+  | GDB - Stack Traces       | GDB thread backtraces per process                                                                | ${CPU_GDB_LOG_DIR}/gdb_backtrace_${HOSTNAME}_pid${pid}_${timestamp}.log     |
+  | GDB - Comprehensive      | Full GDB debug session per process                                                               | ${CPU_GDB_LOG_DIR}/gdb_comprehensive_${HOSTNAME}_pid${pid}_${timestamp}.log |
+  | GDB - Core Dumps         | Core dump analysis (crash mode)                                                                  | ${CPU_GDB_LOG_DIR}/gdb_coredump_${HOSTNAME}_pid${pid}_${timestamp}.log      |
+  | Failure Diagnostics      | nvidia-smi -q, nvlink, topology, dcgmi, IMEX, GPU clocks/temp/power, ECC errors, kernel messages | ${FAILURE_DIAG_DIR}/failure_diagnostics_${HOSTNAME}_${timestamp}.log        |
+  | NVIDIA Bug Report        | nvidia-bug-report.sh script                                                                      | Specified by script parameter                                               |
+  | Log Collection - NCCL    | NCCL logs from /tmp/*nccl*log* and $NCCL_DEBUG_FILE directory                                    | ${LOG_DIR}/nccl_debug_collected/                                            |
+  | Log Collection - Summary | File counts, directory sizes, complete file listing                                              | ${LOG_DIR}/summary.txt                                                      |
+  | Log Collection - Events  | Extracted errors, warnings, failures, timeouts, crashes, NCCL/GPU errors                         | ${LOG_DIR}/important_events.txt                                             |
+  | Log Collection - Status  | Log collection script execution log                                                              | ${LOG_DIR}/log_collection.log                                               |
+  | Log Archive              | Copy of entire log directory                                                                     | ${ALL_JOB_LOGS_DIR}/job_${JOB_ID}_${timestamp}/                             |
+  | Log Tarball              | Compressed archive (optional)                                                                    | ${TAR_DIR}/job_${JOB_ID}_logs_${timestamp}.tar.gz                           |
+  | Slurm Output             | Job stdout                                                                                       | job-output/logs/job1/%x.%j.out                                              |
+  | Slurm Error              | Job stderr                                                                                       | job-output/logs/job1/%x.%j.err                                              |
 
-**Application logs:**
-- `/opt/cycle/jetpack/logs/jetpack.log`
-- `/opt/cycle/jetpack/logs/jetpackd.log`
-- `/opt/healthagent/healthagent.log`
-
-## Data Flow Architecture
-
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────────┐
-│   Slurm VMs     │    │  Data Collection │    │  Log Analytics      │
-│                 │────│      Rules       │────│     Workspace       │
-│ Azure Monitor   │    │                  │    │                     │
-│     Agent       │    │   Transform      │    │  Raw Tables (_CL)   │
-└─────────────────┘    │     & Route      │    │                     │
-                       └──────────────────┘    │  Future: Processed  │
-                                               │  Tables (KQL)       │
-                                               └─────────────────────┘
-```
-
-## Hackathon connection
-
-The goal of the hackathon is to develop tooling to enable LLM-based AI agents to interact with compute clusters to aid in assesssing cluster health, debugging cluster issues, debugging failed jobs, etc.
-
-Tooling to be developed includes potentially:
-- MCP server for logs and metrics
-- MCP server for cluster access
-- Microsoft MCP server
-
-that should work on both Slurm and AKS based clusters.
-
-### References
-
-- [Tasks](https://loop.cloud.microsoft/p/eyJ1IjoiaHR0cHM6Ly9taWNyb3NvZnQuc2hhcmVwb2ludC5jb20vY29udGVudHN0b3JhZ2UvQ1NQXzE5Mjg4ODA0LTUwNGMtNDQwOC1hNTFlLTMwZGNkMThhYWE4MD9uYXY9Y3owbE1rWmpiMjUwWlc1MGMzUnZjbUZuWlNVeVJrTlRVRjh4T1RJNE9EZ3dOQzAxTURSakxUUTBNRGd0WVRVeFpTMHpNR1JqWkRFNFlXRmhPREFtWkQxaUpUSXhRa2xuYjBkVmVGRkRSVk5zU0dwRVl6QlpjWEZuVHpBelUwOXJkMnBXYkU1dFVrTmxTVkZqYm5kVk9IbFNTbkpCU0dSb2NGUkpNM3B6U0ZoWWJYaERYeVptUFRBeFJrbFNRVTlYVERkRldVSXpSelZWV2twT1JESkRRVWxKVGpZMlRGUTJUa1FtWXowbE1rWW1ZVDFNYjI5d1FYQndKbkE5SlRRd1pteDFhV1I0SlRKR2JHOXZjQzF3WVdkbExXTnZiblJoYVc1bGNpWjRQU1UzUWlVeU1uY2xNaklsTTBFbE1qSlVNRkpVVlVoNGRHRlhUbmxpTTA1MldtNVJkV015YUdoamJWWjNZakpzZFdSRE5XcGlNakU0V1dsR1ExTlhaSFpTTVZZMFZWVk9SbFV5ZUVsaGExSnFUVVpzZUdOWFpGQk5SRTVVVkRKME0yRnNXbk5VYlRGVFVUSldTbFZYVG5Wa01WVTBaVlpLUzJOclJrbGFSMmgzVmtWcmVtVnVUa2xYUm1oMFpVVk9abVpFUVhoU2EyeFRVVlU1V0ZSc1p6RlRSVlpNVWpCS1dWWlZXa2RTUldzeVZGVm9RbEpHVmtaWFJrSkZWR3hqSlRORUpUSXlKVEpESlRJeWFTVXlNaVV6UVNVeU1tTmxOV1V5WXpZeUxURmxZek10TkdNMU9DMWlNR1E1TFRabU5EWXpZMlkxWkdSaFlTVXlNaVUzUkE9PSJ9?ct=1757363270925&&LOF=1)
-- [Workflows to be supported](https://microsoft.sharepoint.com/:fl:/g/contentstorage/CSP_19288804-504c-4408-a51e-30dcd18aaa80/EZDTwS24KR9FkLA7RhGUkyMBiQAGzB44JRZL1FTWdgJGoQ?e=jhvL4n&nav=cz0lMkZjb250ZW50c3RvcmFnZSUyRkNTUF8xOTI4ODgwNC01MDRjLTQ0MDgtYTUxZS0zMGRjZDE4YWFhODAmZD1iJTIxQklnb0dVeFFDRVNsSGpEYzBZcXFnTzAzU09rd2pWbE5tUkNlSVFjbndVOHlSSnJBSGRocFRJM3pzSFhYbXhDXyZmPTAxRklSQU9XTVEyUEFTM09CSkQ1Q1pCTUIzSVlJWkpFWkQmYz0lMkYmYT1Mb29wQXBwJnA9JTQwZmx1aWR4JTJGbG9vcC1wYWdlLWNvbnRhaW5lciZ4PSU3QiUyMnclMjIlM0ElMjJUMFJUVUh4dGFXTnliM052Wm5RdWMyaGhjbVZ3YjJsdWRDNWpiMjE4WWlGQ1NXZHZSMVY0VVVORlUyeElha1JqTUZseGNXZFBNRE5UVDJ0M2FsWnNUbTFTUTJWSlVXTnVkMVU0ZVZKS2NrRklaR2h3VkVremVuTklXRmh0ZUVOZmZEQXhSa2xTUVU5WFRsZzFTRVZMUjBKWVZVWkdSRWsyVFVoQlJGVkZXRkJFVGxjJTNEJTIyJTJDJTIyaSUyMiUzQSUyMmMxMzAyMmY2LTVhZjAtNGY3NS04ZjVmLTg4MTM3ZWJkMTY1NCUyMiU3RA%3D%3D)
-- [Sample example MCP server](https://github.com/edwardsp/mcpserver)
+  Note: Default paths resolve as follows:
+  - LOG_DIR = /workspace/logs/job${JOB_NUMBER}/${SLURM_JOB_ID}
+  - SYSTEM_LOG_DIR = ${LOG_DIR}/system
+  - CPU_GDB_LOG_DIR = ${LOG_DIR}/cpu_gdb
+  - NCCL_RAS_LOG_DIR = ${LOG_DIR}/ncclras
+  - FAILURE_DIAG_DIR = ${LOG_DIR}/failure_diagnostics
+  - NCCL_DEBUG_LOGS_DIR = /workspace/logs/job${JOB_NUMBER}/nccl
