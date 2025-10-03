@@ -18,6 +18,7 @@ fi
 DCRS=(
     "slurmctld_raw_dcr"
     "slurmd_raw_dcr"
+    "slurmjobs_raw_dcr"
     "slurmdb_raw_dcr"
     "slurmrestd_raw_dcr"
     "jetpack_raw_dcr"

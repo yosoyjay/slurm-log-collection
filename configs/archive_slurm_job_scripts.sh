@@ -1,9 +1,10 @@
 #!/bin/bash
 # Archive job submission script and environment variables from job head node.
+# - Run as prolog to capture job script and env before job starts.
 # Template: job_{jobid}.{sh,env}
 
 # Configuration
-ARCHIVE_DIR="/shared/slurm-logs/${SLURM_JOB_USER}/"
+ARCHIVE_DIR="/shared/slurm-logs/"
 LOG_PATH="/var/log/slurmd/prolog.log"
 
 # Logging function (project template)

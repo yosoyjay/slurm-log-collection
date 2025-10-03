@@ -16,7 +16,11 @@
     "dataSources": {
       "logFiles": [
         {
-          "filePatterns": ["/shared/slurm-logs/*"],
+          "filePatterns": [
+            "/shared/slurm-logs/*out",
+            "/shared/slurm-logs/*err",
+            "/shared/slurm-logs/*sh,/shared/slurm-logs/*env"
+          ],
           "format": "text",
           "name": "Custom-Text-slurmjobs_raw_CL",
           "streams": ["Custom-Text-slurmjobs_raw_CL"]

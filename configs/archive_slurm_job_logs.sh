@@ -1,10 +1,10 @@
 #!/bin/bash
 # Archive job logs from stdout and stderr to centralized location from job head node.
-# - Likely needs to be run from epliog to have permissions to write to shared location.
+# - Run as epilog to capture logs after job completes.
 # Template: job_{jobid}.{out,err}
 
 # Configuration
-ARCHIVE_DIR="/shared/slurm-logs/${SLURM_JOB_USER}/"
+ARCHIVE_DIR="/shared/slurm-logs/"
 LOG_PATH="/var/log/slurmd/epilog.log"
 
 # Logging function (project template)
