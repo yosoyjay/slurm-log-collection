@@ -46,6 +46,7 @@ create_raw_table "slurmctld_raw_CL" "Raw logs from slurmctld daemon (scheduler)"
 create_raw_table "slurmd_raw_CL" "Raw logs from slurmd daemon (compute nodes)"
 create_raw_table "slurmdb_raw_CL" "Raw logs from slurmdbd daemon (database)"
 create_raw_table "slurmrestd_raw_CL" "Raw logs from slurmrestd daemon (REST API)"
+create_raw_table "slurmjobs_raw_CL" "Raw logs from Slurm job archive files"
 
 # Create tables for OS logs
 echo "=== Creating OS Log Tables ==="

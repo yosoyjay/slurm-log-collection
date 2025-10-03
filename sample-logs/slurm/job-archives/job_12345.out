@@ -1,0 +1,44 @@
+Job started at: Mon Jan 13 14:32:15 UTC 2025
+Job ID: 12345
+Running on nodes: compute-[001-002]
+Number of tasks: 8
+CPUs per task: 2
+
+Loading modules...
+Module gcc/9.3.0 loaded successfully
+Module openmpi/4.1.0 loaded successfully
+
+Setting up environment...
+Working directory: /home/testuser/jobs
+Input file: input.dat (size: 1.2 GB)
+
+Starting parallel computation...
+MPI initialization complete
+Rank 0: Processing data chunk 1/8
+Rank 1: Processing data chunk 2/8
+Rank 2: Processing data chunk 3/8
+Rank 3: Processing data chunk 4/8
+Rank 4: Processing data chunk 5/8
+Rank 5: Processing data chunk 6/8
+Rank 6: Processing data chunk 7/8
+Rank 7: Processing data chunk 8/8
+
+Progress: 10% complete (estimated 45 minutes remaining)
+Progress: 25% complete (estimated 32 minutes remaining)
+Progress: 50% complete (estimated 18 minutes remaining)
+Progress: 75% complete (estimated 8 minutes remaining)
+Progress: 90% complete (estimated 2 minutes remaining)
+
+All ranks completed data processing
+Gathering results from all processes...
+Result validation: PASSED
+Final output written to: results_12345.dat
+
+Performance metrics:
+- Total computation time: 38.7 minutes
+- Average CPU utilization: 94.2%
+- Memory usage peak: 7.1 GB
+- I/O throughput: 125 MB/s
+
+Job completed successfully
+Job finished at: Mon Jan 13 15:10:52 UTC 2025

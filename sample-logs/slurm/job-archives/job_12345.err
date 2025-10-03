@@ -1,0 +1,37 @@
+Loading gcc/9.3.0...
+  Loading requirement: binutils/2.34
+  Loading requirement: glibc/2.31
+Module gcc/9.3.0 loaded
+
+Loading openmpi/4.1.0...
+  Loading requirement: gcc/9.3.0
+  Loading requirement: hwloc/2.2.0
+  Loading requirement: libevent/2.1.12
+  Loading requirement: pmix/3.1.6
+Module openmpi/4.1.0 loaded
+
+mpirun: WARNING: No preset parameters were found for the device that Open MPI detected
+mpirun: WARNING: Using default settings which may not give optimal performance
+
+[compute-001:12346] MCW rank 0 bound to socket 0[core 0[hwt 0-1]], socket 0[core 1[hwt 0-1]]: [BB..][....] (slot list 0:0-1,1:0-1)
+[compute-001:12347] MCW rank 1 bound to socket 0[core 2[hwt 0-1]], socket 0[core 3[hwt 0-1]]: [..BB][....] (slot list 0:2-3,3:0-1)
+[compute-002:12348] MCW rank 2 bound to socket 0[core 0[hwt 0-1]], socket 0[core 1[hwt 0-1]]: [BB..][....] (slot list 0:0-1,1:0-1)
+[compute-002:12349] MCW rank 3 bound to socket 0[core 2[hwt 0-1]], socket 0[core 3[hwt 0-1]]: [..BB][....] (slot list 0:2-3,3:0-1)
+[compute-001:12350] MCW rank 4 bound to socket 1[core 4[hwt 0-1]], socket 1[core 5[hwt 0-1]]: [....][BB..] (slot list 1:4-5,5:0-1)
+[compute-001:12351] MCW rank 5 bound to socket 1[core 6[hwt 0-1]], socket 1[core 7[hwt 0-1]]: [....][..BB] (slot list 1:6-7,7:0-1)
+[compute-002:12352] MCW rank 6 bound to socket 1[core 4[hwt 0-1]], socket 1[core 5[hwt 0-1]]: [....][BB..] (slot list 1:4-5,5:0-1)
+[compute-002:12353] MCW rank 7 bound to socket 1[core 6[hwt 0-1]], socket 1[core 7[hwt 0-1]]: [....][..BB] (slot list 1:6-7,7:0-1)
+
+WARNING: rank 3 detected potential memory pressure (89% usage)
+WARNING: rank 6 detected high network latency (15.2ms average)
+
+NOTICE: Using optimized BLAS library for matrix operations
+NOTICE: Enabling OpenMP threading for compute-intensive sections
+NOTICE: Auto-tuning MPI collective algorithms based on message size
+
+Performance warning: I/O bottleneck detected on rank 2 (throughput: 87 MB/s)
+Performance warning: Load imbalance detected between ranks (variance: 12.3%)
+
+Final validation warnings:
+- 3 floating-point precision warnings (acceptable tolerance)
+- 1 convergence iteration exceeded expected bounds (within limits)

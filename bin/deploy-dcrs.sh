@@ -77,6 +77,7 @@ deploy_dcr "$DCR_DIR/slurm/slurmctld_raw_dcr.json" "slurmctld_raw_dcr" "DCR for 
 deploy_dcr "$DCR_DIR/slurm/slurmd_raw_dcr.json" "slurmd_raw_dcr" "DCR for Slurm node daemon logs"
 deploy_dcr "$DCR_DIR/slurm/slurmdb_raw_dcr.json" "slurmdb_raw_dcr" "DCR for Slurm database daemon logs"
 deploy_dcr "$DCR_DIR/slurm/slurmrestd_raw_dcr.json" "slurmrestd_raw_dcr" "DCR for Slurm REST API daemon logs"
+deploy_dcr "$DCR_DIR/slurm/slurmjobs_raw_dcr.json" "slurmjobs_raw_dcr" "DCR for Slurm job archive logs"
 
 # Deploy OS DCRs
 echo "=== Deploying OS Data Collection Rules ==="
