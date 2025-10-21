@@ -17,7 +17,9 @@
       "logFiles": [
         {
           "filePatterns": [
-            "/shared/slurm-logs/*out,/shared/slurm-logs/*err,/shared/slurm-logs/*sh,/shared/slurm-logs/*env"
+            "/shared/slurm-logs/*out",
+            "/shared/slurm-logs/*err",
+            "/shared/slurm-logs/*sh,/shared/slurm-logs/*env"
           ],
           "format": "text",
           "name": "Custom-Text-slurmjobs_raw_CL",
