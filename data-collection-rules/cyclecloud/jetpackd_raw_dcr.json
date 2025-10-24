@@ -2,13 +2,13 @@
   "type": "Microsoft.Insights/dataCollectionRules",
   "name": "jetpackd_raw_dcr",
   "description": "DCR for ingesting CycleCloud jetpackd.log from scheduler and nodes",
-  "location": "centralus",
+  "location": "{location-name}",
   "kind": "Linux",
   "properties": {
     "dataFlows": [
       {
         "streams": ["Custom-Text-jetpackd_raw_CL"],
-        "destinations": ["la-workspace"],
+        "destinations": ["{workspace-name}"],
         "outputStream": "Custom-jetpackd_raw_CL",
         "transformKql": "source"
       }
@@ -16,7 +16,7 @@
     "dataSources": {
       "logFiles": [
         {
-          "filePatterns": ["/opt/cycle/jetpack/logs/jetpackd.log"],
+          "filePatterns": ["/opt/cycle/jetpack/logs/*.log"],
           "format": "text",
           "name": "Custom-Text-jetpackd_raw_CL",
           "streams": ["Custom-Text-jetpackd_raw_CL"]
@@ -48,7 +48,7 @@
     "destinations": {
       "logAnalytics": [
         {
-          "name": "la-workspace",
+          "name": "{workspace-name}",
           "workspaceResourceId": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.OperationalInsights/workspaces/{workspace-name}"
         }
       ]

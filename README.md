@@ -118,16 +118,21 @@ Ensure the following environment variables are set in your shell.
 
 See `.env` file for example values:
 ```bash
-export RESOURCE_GROUP=resource-group-name
-export WORKSPACE_NAME=job-analytics-workspace-name
-export SLURMCTLD_TABLE_NAME=slurmctld-table-name_CL
-export REGION=centralus
-export SUBSCRIPTION_ID=00000000-0000-0000-0000-000000000000
-export VMSS_RG=vmms-resource-group-name
-export VMSS_NAME=vmss-name
-export VMSS_ID=/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vmms-resource-group-name/providers/Microsoft.Compute/virtualMachineScaleSets/vmss-name
-export DCR_ID=/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resource-group-name/providers/Microsoft.Insights/dataCollectionRules/dcr-name
-export VM_ID=/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resource-group-name/providers/Microsoft.Compute/virtualMachines/vm-name
+export RESOURCE_GROUP="<resource-group-name>"
+export WORKSPACE_NAME="<job-analytics-workspace-name>"
+export WORKSPACE_TABLE_NAME="<slurmctld-table-name>"
+export REGION="<centralus>"
+export SUBSCRIPTION_ID="<00000000-0000-0000-0000-000000000000>"
+export VMSS_RG="<vmms-resource-group-name>"
+export VMSS_NAME="<vmss-name>"
+export VM_NAME="<vm-name>"
+export DATA_COLLECTION_RULES_NAME="<dcr-name>"
+
+# DO NOT EDIT BELOW ENV VARS
+export SLURMCTLD_TABLE_NAME="${WORKSPACE_TABLE_NAME}_CL"
+export VMSS_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Compute/virtualMachineScaleSets/${VMSS_NAME}"
+export DCR_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Insights/dataCollectionRules/${DATA_COLLECTION_RULES_NAME}"
+export VM_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Compute/virtualMachines/${VM_NAME}"
 ```
 
 ### Step-by-Step Setup deployment of log collection
@@ -140,12 +145,18 @@ Replace the fluentbit binary installed with Azure Monitor Agent with a custom bu
 - Run the update script on all VMs to replace the fluentbit binary
 - Configure a VMSS to run the script on all new instances (e.g. using CycleCloud, Ansible, etc.)
 
+With `.env` being configured, first let's source the file.
+
+```bash
+source ./.env
+```
+
 #### Step 1: Create Log Analytics Tables
 
 Run the provided script to create all required tables:
 
 ```bash
-./create-tables.sh
+bash ./bin/create-tables.sh
 ```
 
 This creates the following raw data tables with standard schema:
@@ -173,8 +184,7 @@ FilePath (string) - Path to the source log file
 Deploy all DCR configurations:
 
 ```bash
-chmod +x deploy-dcrs.sh
-./deploy-dcrs.sh
+bash ./bin/deploy-dcrs.sh
 ```
 
 This deploys DCR JSON files from the `data-collection-rules/` directory:
@@ -187,7 +197,7 @@ This deploys DCR JSON files from the `data-collection-rules/` directory:
 Associate all DCRs with the appropriate VMs using the provided script:
 
 ```bash
-./bin/associate-dcrs.sh
+bash ./bin/associate-dcrs.sh
 ```
 
 This script automatically:
@@ -195,6 +205,31 @@ This script automatically:
 - Associates compute-node DCRs with the compute VMSS (VMSS_ID from .env)
 - Associates shared DCRs (syslog, jetpack, etc.) with both scheduler and compute nodes
 - Provides detailed output showing which DCRs are associated with which resources
+
+#### Step 3b [Optional]: Copy sample test data in designated dirs
+
+If you want to first test it with the sample data provided in the repo, run the below commands
+
+```bash
+sudo mkdir -p /opt/healthagent
+sudo cp ./sample-logs/cyclecloud/healthagent.log /opt/healthagent/healthagent_raw_dcr.json
+ls /opt/healthagent
+
+sudo mkdir -p /opt/cycle/jetpack/logs
+sudo cp ./sample-logs/cyclecloud/jetpack.log /opt/cycle/jetpack/logs/jetpack.log
+sudo cp ./sample-logs/cyclecloud/jetpackd.log /opt/cycle/jetpack/logs/jetpackd.log
+sudo cp ./sample-logs/cyclecloud/install.log /opt/cycle/jetpack/logs/install.log
+ls /opt/cycle/jetpack/logs
+
+sudo mkdir -p /var/log/slurmctld
+sudo cp ./sample-logs/slurm/slurmctld.log /var/log/slurmctld/slurmctld.log
+sudo cp ./sample-logs/slurm/slurmd.log /var/log/slurmd/slurmd.log
+ls /var/log/slurmctld
+
+sudo mkdir -p /shared/slurm-logs
+sudo cp ./sample-logs/slurm/job-archives/* /shared/slurm-logs/
+ls /shared/slurm-logs
+```
 
 #### Step 4: Verify Log Ingestion
 

@@ -54,6 +54,7 @@ deploy_dcr() {
     sed -e "s|{subscription-id}|$SUBSCRIPTION_ID|g" \
         -e "s|{resource-group}|$RESOURCE_GROUP|g" \
         -e "s|{workspace-name}|$WORKSPACE_NAME|g" \
+        -e "s|{location-name}|$REGION|g" \
         -e "s|/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.OperationalInsights/workspaces/{workspace-name}|$WORKSPACE_RESOURCE_ID|g" \
         "$dcr_file" > "$temp_file"
 
@@ -61,7 +62,8 @@ deploy_dcr() {
     az monitor data-collection rule create \
         --resource-group "$RESOURCE_GROUP" \
         --rule-file "$temp_file" \
-        --name "$dcr_name"
+        --name "$dcr_name" \
+        --location "${REGION}"
 
     # Clean up temp file
     rm "$temp_file"

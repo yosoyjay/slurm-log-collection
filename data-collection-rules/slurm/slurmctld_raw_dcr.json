@@ -2,14 +2,14 @@
   "type": "Microsoft.Insights/dataCollectionRules",
   "name": "slurmctld_raw_dcr",
   "description": "DCR for ingesting slurmctld.log from Slurm controller",
-  "location": "centralus",
+  "location": "{location-name}",
   "kind": "Linux",
   "properties": {
     "dataFlows": [
       {
         "streams": ["Custom-Text-slurmctld_raw_CL"],
-        "destinations": ["la-workspace"],
-        "outputStream": "Custom-Slurmctld_Raw_CL",
+        "destinations": ["{workspace-name}"],
+        "outputStream": "Custom-slurmctld_raw_CL",
         "transformKql": "source"
       }
     ],
@@ -48,7 +48,7 @@
     "destinations": {
       "logAnalytics": [
         {
-          "name": "la-workspace",
+          "name": "{workspace-name}",
           "workspaceResourceId": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.OperationalInsights/workspaces/{workspace-name}"
         }
       ]

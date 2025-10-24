@@ -2,13 +2,13 @@
   "type": "Microsoft.Insights/dataCollectionRules",
   "name": "slurmdb_raw_dcr",
   "description": "DCR for ingesting slurmdbd.log from Slurm database daemon",
-  "location": "centralus",
+  "location": "{location-name}",
   "kind": "Linux",
   "properties": {
     "dataFlows": [
       {
         "streams": ["Custom-Text-slurmdb_raw_CL"],
-        "destinations": ["la-workspace"],
+        "destinations": ["{workspace-name}"],
         "outputStream": "Custom-slurmdb_raw_CL",
         "transformKql": "source"
       }
@@ -16,7 +16,7 @@
     "dataSources": {
       "logFiles": [
         {
-          "filePatterns": ["/var/log/slurmctld/slurmdbd.log"],
+          "filePatterns": ["/var/log/slurmd/*.log"],
           "format": "text",
           "name": "Custom-Text-slurmdb_raw_CL",
           "streams": ["Custom-Text-slurmdb_raw_CL"]
@@ -48,7 +48,7 @@
     "destinations": {
       "logAnalytics": [
         {
-          "name": "la-workspace",
+          "name": "{workspace-name}",
           "workspaceResourceId": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.OperationalInsights/workspaces/{workspace-name}"
         }
       ]
