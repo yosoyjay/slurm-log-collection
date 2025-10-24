@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Azure CLI script to deploy Data Collection Rules for Slurm log collection
 # This script deploys all the DCR JSON files to Azure Monitor
 

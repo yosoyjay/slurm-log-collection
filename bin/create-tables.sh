@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Azure CLI script to create Log Analytics tables for Slurm log collection
 # This script creates the destination tables required for each Data Collection Rule
 

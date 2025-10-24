@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Azure CLI script to associate Data Collection Rules with VMs for Slurm log collection
 # This script creates associations between DCRs and VMs based on VM roles
 # - Scheduler: Single VM (VM_ID from .env)

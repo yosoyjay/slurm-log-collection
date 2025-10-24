@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Delete all DCR associations for your VMs and VMSS
 
 set -e
