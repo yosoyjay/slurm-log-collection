@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Delete all Slurm-related Data Collection Rules
 
 set -e

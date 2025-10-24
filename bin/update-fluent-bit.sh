@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Update fluent-bit binary used with Azure Monitor Agent to locally compiled version supporting 64K page sizes
 # This script replaces the Azure Monitor Agent's fluent-bit binary with a locally compiled version
 # that supports ARM64 systems with 64KB page sizes.
@@ -13,7 +12,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-FLUENT_BIT_SOURCE_PATH="/shared/home/lopezjesse/fluent-bit/build/bin/fluent-bit"
+FLUENT_BIT_SOURCE_PATH="/shared/fluent-bit"
 AMA_FLUENT_BIT_PATH="/opt/microsoft/azuremonitoragent/bin/fluent-bit"
 BACKUP_SUFFIX="orig_page_size"
 
@@ -134,13 +133,3 @@ echo
 echo -e "${BLUE}=== Update Complete ===${NC}"
 echo -e "${GREEN}Fluent-bit binary has been updated to support 64KB page sizes${NC}"
 echo
-echo "Next steps:"
-echo "1. Monitor fluent-bit startup: ps aux | grep fluent-bit"
-echo "2. Check for file monitoring: sudo lsof | grep fluent-bit | grep '/var/log'"
-echo "3. Monitor agent logs: sudo journalctl -u azuremonitoragent -f"
-echo "4. Test log ingestion after 15-20 minutes"
-echo
-echo "To revert to original binary if needed:"
-echo "  sudo systemctl stop azuremonitoragent"
-echo "  sudo mv $BACKUP_PATH $AMA_FLUENT_BIT_PATH"
-echo "  sudo systemctl start azuremonitoragent"

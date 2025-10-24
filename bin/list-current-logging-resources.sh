@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # List all current DCRs, associations, and tables for inspection
 # This script provides a comprehensive view of the current log collection setup
 
@@ -177,7 +176,6 @@ if [ "$DCR_COUNT" -gt 0 ] || [ "$VM_ASSOC_COUNT" -gt 0 ] || [ "$VMSS_ASSOC_COUNT
     echo "Current deployment detected. To clean up for testing:"
     echo "1. Run cleanup-associations.sh to remove DCR associations"
     echo "2. Run cleanup-dcrs.sh to remove Data Collection Rules"
-    echo "3. Run backup-tables.sh to create backup tables (optional)"
 else
     echo "No current deployment detected. You can proceed with:"
     echo "1. Run create-tables.sh to create Log Analytics tables"
