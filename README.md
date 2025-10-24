@@ -244,30 +244,3 @@ syslog_raw_CL
 | parse RawData with Timestamp " " Computer " " Process ": " Message
 | project TimeGenerated, Computer, Timestamp, Process, Message
 ```
-
-## Manual Setup (Alternative to Scripts)
-
-### Create Individual Table Example
-
-```bash
-az monitor log-analytics workspace table create \
-    -g $RESOURCE_GROUP \
-    --workspace-name $WORKSPACE_NAME \
-    --name slurmctld_raw_CL \
-    --plan Analytics \
-    --description "Raw logs from slurmctld daemon" \
-    --columns \
-        TimeGenerated=datetime \
-        RawData=string \
-        Computer=string \
-        FilePath=string
-```
-
-### Create Individual DCR Example
-
-```bash
-az monitor data-collection rule create \
-    -g $RESOURCE_GROUP \
-    --name 'slurmctld_raw_dcr' \
-    --rule-file data-collection-rules/slurm/slurmctld_raw_dcr.json
-```
