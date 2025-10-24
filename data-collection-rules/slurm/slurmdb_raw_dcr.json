@@ -8,7 +8,7 @@
     "dataFlows": [
       {
         "streams": ["Custom-Text-slurmdb_raw_CL"],
-        "destinations": ["la-workspace"],
+        "destinations": ["{workspace-name}"],
         "outputStream": "Custom-slurmdb_raw_CL",
         "transformKql": "source"
       }
@@ -48,7 +48,7 @@
     "destinations": {
       "logAnalytics": [
         {
-          "name": "la-workspace",
+          "name": "{workspace-name}",
           "workspaceResourceId": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.OperationalInsights/workspaces/{workspace-name}"
         }
       ]
