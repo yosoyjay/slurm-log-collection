@@ -50,12 +50,15 @@ deploy_dcr() {
     # Create a temporary file with substituted values
     temp_file=$(mktemp)
 
-    # Replace placeholder values in the DCR JSON
+    # Replace placeholder values in the DCR JSON location
     sed -e "s|{subscription-id}|$SUBSCRIPTION_ID|g" \
         -e "s|{resource-group}|$RESOURCE_GROUP|g" \
         -e "s|{workspace-name}|$WORKSPACE_NAME|g" \
+        -e "s|{location-name}|$REGION|g" \
         -e "s|/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.OperationalInsights/workspaces/{workspace-name}|$WORKSPACE_RESOURCE_ID|g" \
         "$dcr_file" > "$temp_file"
+
+    cat ${temp_file}
 
     # Deploy the DCR
     az monitor data-collection rule create \

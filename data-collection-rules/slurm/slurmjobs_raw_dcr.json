@@ -2,7 +2,7 @@
   "type": "Microsoft.Insights/dataCollectionRules",
   "name": "slurmjobs_raw_dcr",
   "description": "DCR for ingesting Slurm job archive logs from /shared/slurm-logs/",
-  "location": "centralus",
+  "location": "{location-name}",
   "kind": "Linux",
   "properties": {
     "dataFlows": [

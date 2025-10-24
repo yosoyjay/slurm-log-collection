@@ -118,16 +118,21 @@ Ensure the following environment variables are set in your shell.
 
 See `.env` file for example values:
 ```bash
-export RESOURCE_GROUP=resource-group-name
-export WORKSPACE_NAME=job-analytics-workspace-name
-export SLURMCTLD_TABLE_NAME=slurmctld-table-name_CL
-export REGION=centralus
-export SUBSCRIPTION_ID=00000000-0000-0000-0000-000000000000
-export VMSS_RG=vmms-resource-group-name
-export VMSS_NAME=vmss-name
-export VMSS_ID=/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vmms-resource-group-name/providers/Microsoft.Compute/virtualMachineScaleSets/vmss-name
-export DCR_ID=/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resource-group-name/providers/Microsoft.Insights/dataCollectionRules/dcr-name
-export VM_ID=/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resource-group-name/providers/Microsoft.Compute/virtualMachines/vm-name
+export RESOURCE_GROUP="<resource-group-name>"
+export WORKSPACE_NAME="<job-analytics-workspace-name>"
+export WORKSPACE_TABLE_NAME="<slurmctld-table-name>"
+export REGION="<centralus>"
+export SUBSCRIPTION_ID="<00000000-0000-0000-0000-000000000000>"
+export VMSS_RG="<vmms-resource-group-name>"
+export VMSS_NAME="<vmss-name>"
+export VM_NAME="<vm-name>"
+export DATA_COLLECTION_RULES_NAME="<dcr-name>"
+
+# DO NOT EDIT BELOW ENV VARS
+export SLURMCTLD_TABLE_NAME="${WORKSPACE_TABLE_NAME}_CL"
+export VMSS_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Compute/virtualMachineScaleSets/${VMSS_NAME}"
+export DCR_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Insights/dataCollectionRules/${DATA_COLLECTION_RULES_NAME}"
+export VM_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Compute/virtualMachines/${VM_NAME}"
 ```
 
 ### Step-by-Step Setup deployment of log collection
@@ -140,12 +145,18 @@ Replace the fluentbit binary installed with Azure Monitor Agent with a custom bu
 - Run the update script on all VMs to replace the fluentbit binary
 - Configure a VMSS to run the script on all new instances (e.g. using CycleCloud, Ansible, etc.)
 
+With `.env` being configured, first let's source the file.
+
+```bash
+source ./.env
+```
+
 #### Step 1: Create Log Analytics Tables
 
 Run the provided script to create all required tables:
 
 ```bash
-./create-tables.sh
+bash ./bin/create-tables.sh
 ```
 
 This creates the following raw data tables with standard schema:
@@ -173,8 +184,7 @@ FilePath (string) - Path to the source log file
 Deploy all DCR configurations:
 
 ```bash
-chmod +x deploy-dcrs.sh
-./deploy-dcrs.sh
+bash ./bin/deploy-dcrs.sh
 ```
 
 This deploys DCR JSON files from the `data-collection-rules/` directory:

@@ -2,7 +2,7 @@
   "type": "Microsoft.Insights/dataCollectionRules",
   "name": "slurmd_raw_dcr",
   "description": "DCR for ingesting slurmd.log from Slurm compute nodes",
-  "location": "centralus",
+  "location": "{location-name}",
   "kind": "Linux",
   "properties": {
     "dataFlows": [

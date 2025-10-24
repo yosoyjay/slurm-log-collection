@@ -2,7 +2,7 @@
   "type": "Microsoft.Insights/dataCollectionRules",
   "name": "slurmrestd_raw_dcr",
   "description": "DCR for ingesting slurmrestd.log from Slurm REST API daemon",
-  "location": "centralus",
+  "location": "{location-name}",
   "kind": "Linux",
   "properties": {
     "dataFlows": [
