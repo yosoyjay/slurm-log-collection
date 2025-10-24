@@ -197,7 +197,7 @@ This deploys DCR JSON files from the `data-collection-rules/` directory:
 Associate all DCRs with the appropriate VMs using the provided script:
 
 ```bash
-./bin/associate-dcrs.sh
+bash ./bin/associate-dcrs.sh
 ```
 
 This script automatically:
