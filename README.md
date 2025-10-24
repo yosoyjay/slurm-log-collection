@@ -206,6 +206,31 @@ This script automatically:
 - Associates shared DCRs (syslog, jetpack, etc.) with both scheduler and compute nodes
 - Provides detailed output showing which DCRs are associated with which resources
 
+#### Step 3b [Optional]: Copy sample test data in designated dirs
+
+If you want to first test it with the sample data provided in the repo, run the below commands
+
+```bash
+sudo mkdir -p /opt/healthagent
+sudo cp ./sample-logs/cyclecloud/healthagent.log /opt/healthagent/healthagent_raw_dcr.json
+ls /opt/healthagent
+
+sudo mkdir -p /opt/cycle/jetpack/logs
+sudo cp ./sample-logs/cyclecloud/jetpack.log /opt/cycle/jetpack/logs/jetpack.log
+sudo cp ./sample-logs/cyclecloud/jetpackd.log /opt/cycle/jetpack/logs/jetpackd.log
+sudo cp ./sample-logs/cyclecloud/install.log /opt/cycle/jetpack/logs/install.log
+ls /opt/cycle/jetpack/logs
+
+sudo mkdir -p /var/log/slurmctld
+sudo cp ./sample-logs/slurm/slurmctld.log /var/log/slurmctld/slurmctld.log
+sudo cp ./sample-logs/slurm/slurmd.log /var/log/slurmd/slurmd.log
+ls /var/log/slurmctld
+
+sudo mkdir -p /shared/slurm-logs
+sudo cp ./sample-logs/slurm/job-archives/* /shared/slurm-logs/
+ls /shared/slurm-logs
+```
+
 #### Step 4: Verify Log Ingestion
 
 Wait ~15 minutes for initial log ingestion, then verify in Log Analytics:

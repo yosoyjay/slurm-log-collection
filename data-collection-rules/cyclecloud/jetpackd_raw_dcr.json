@@ -16,7 +16,7 @@
     "dataSources": {
       "logFiles": [
         {
-          "filePatterns": ["/opt/cycle/jetpack/logs/jetpackd.log"],
+          "filePatterns": ["/opt/cycle/jetpack/logs/*.log"],
           "format": "text",
           "name": "Custom-Text-jetpackd_raw_CL",
           "streams": ["Custom-Text-jetpackd_raw_CL"]
