@@ -105,11 +105,12 @@ slurmjobs_raw_CL
 
 ### Prerequisites
 
-1. Azure Monitor Agent must be installed and configured on all VMs and VMSS
-  - For GB200: The fluentbit binary installed with Azure Monitor Agent must be replaced with a custome build that supports 64K page size.  (See Step 0: Update Fluentbit)"
-2. VM and VMSS must have system identity assigned otherwise Azure Monitor Agent will not work
-3. Log Analytics Workspace must be created and accessible
-4. Azure priviliges for creating DCRs and table associations must be granted (Monitoring Contributor role) for entity deploying the script
+1. [Azure Monitor Agent](https://learn.microsoft.com/en-us/azure/azure-monitor/agents/azure-monitor-agent-manage?tabs=azure-portal) must be installed and configured on all VMs and Azure Virtual Machine Scale Set (VMSS)
+    - For GB200: The fluentbit binary installed with Azure Monitor Agent must be replaced with a custome build that supports 64K page size.  (See Step 0: Update Fluentbit)"
+2. VM and VMSS must have [system identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities-scale-sets?pivots=identity-mi-methods-azp#enable-system-assigned-managed-identity-on-an-existing-virtual-machine-scale-set) assigned otherwise Azure Monitor Agent will not work
+    - For production deployments: It is recommended to use [user-assigned identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities-scale-sets?pivots=identity-mi-methods-azp#user-assigned-managed-identity) for Virtual Machine Scale Sets. User-assigned identities automatically propagate to individual VMs as they are dynamically created, whereas system-assigned identities must be assigned to each VM at creation time. The user-assigned identity requires the [Monitoring Metrics Publisher](https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/monitor#monitoring-metrics-publisher) role to publish logs and metrics to Azure Monitor.
+3. [Log Analytics Workspace](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/quick-create-workspace?tabs=azure-portal) must be created and accessible
+4. Azure priviliges for creating DCRs and table associations must be granted ([Monitoring Contributor role](https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/monitor#monitoring-contributor)) for entity deploying the script
 5. Environment variables must be set (see `.env` file example below)
 
 ### Required Environment Variables
@@ -125,14 +126,14 @@ export REGION="<centralus>"
 export SUBSCRIPTION_ID="<00000000-0000-0000-0000-000000000000>"
 export VMSS_RG="<vmms-resource-group-name>"
 export VMSS_NAME="<vmss-name>"
-export VM_NAME="<vm-name>"
+export SLURM_SCHEDULER_VM="<vm-name>"
 export DATA_COLLECTION_RULES_NAME="<dcr-name>"
 
 # DO NOT EDIT BELOW ENV VARS
 export SLURMCTLD_TABLE_NAME="${WORKSPACE_TABLE_NAME}_CL"
 export VMSS_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Compute/virtualMachineScaleSets/${VMSS_NAME}"
 export DCR_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Insights/dataCollectionRules/${DATA_COLLECTION_RULES_NAME}"
-export VM_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Compute/virtualMachines/${VM_NAME}"
+export VM_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Compute/virtualMachines/${SLURM_SCHEDULER_VM}"
 ```
 
 ### Step-by-Step Setup deployment of log collection
@@ -206,13 +207,16 @@ This script automatically:
 - Associates shared DCRs (syslog, jetpack, etc.) with both scheduler and compute nodes
 - Provides detailed output showing which DCRs are associated with which resources
 
-#### Step 3b [Optional]: Copy sample test data in designated dirs
 
-If you want to first test it with the sample data provided in the repo, run the below commands
+### Varifying the deployment
+
+#### Step 1 [Optional]: Copy sample test data in designated dirs
+
+If you want to first test it with the sample data provided in the repo, run the below commands:
 
 ```bash
 sudo mkdir -p /opt/healthagent
-sudo cp ./sample-logs/cyclecloud/healthagent.log /opt/healthagent/healthagent_raw_dcr.json
+sudo cp ./sample-logs/cyclecloud/healthagent.log /opt/healthagent/healthagent.log
 ls /opt/healthagent
 
 sudo mkdir -p /opt/cycle/jetpack/logs
@@ -221,17 +225,17 @@ sudo cp ./sample-logs/cyclecloud/jetpackd.log /opt/cycle/jetpack/logs/jetpackd.l
 sudo cp ./sample-logs/cyclecloud/install.log /opt/cycle/jetpack/logs/install.log
 ls /opt/cycle/jetpack/logs
 
-sudo mkdir -p /var/log/slurmctld
+sudo mkdir -p /var/log/slurmctld /var/log/slurmd
 sudo cp ./sample-logs/slurm/slurmctld.log /var/log/slurmctld/slurmctld.log
 sudo cp ./sample-logs/slurm/slurmd.log /var/log/slurmd/slurmd.log
-ls /var/log/slurmctld
+ls /var/log/slurmctld /var/log/slurmd
 
 sudo mkdir -p /shared/slurm-logs
 sudo cp ./sample-logs/slurm/job-archives/* /shared/slurm-logs/
 ls /shared/slurm-logs
 ```
 
-#### Step 4: Verify Log Ingestion
+#### Step 2: Verify Log Ingestion
 
 Wait ~15 minutes for initial log ingestion, then verify in Log Analytics:
 
@@ -279,3 +283,5 @@ syslog_raw_CL
 | parse RawData with Timestamp " " Computer " " Process ": " Message
 | project TimeGenerated, Computer, Timestamp, Process, Message
 ```
+
+
