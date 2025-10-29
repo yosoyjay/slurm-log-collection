@@ -208,34 +208,7 @@ This script automatically:
 - Provides detailed output showing which DCRs are associated with which resources
 
 
-### Varifying the deployment
-
-#### Step 1 [Optional]: Copy sample test data in designated dirs
-
-If you want to first test it with the sample data provided in the repo, run the below commands:
-
-```bash
-sudo mkdir -p /opt/healthagent
-sudo cp ./sample-logs/cyclecloud/healthagent.log /opt/healthagent/healthagent.log
-ls /opt/healthagent
-
-sudo mkdir -p /opt/cycle/jetpack/logs
-sudo cp ./sample-logs/cyclecloud/jetpack.log /opt/cycle/jetpack/logs/jetpack.log
-sudo cp ./sample-logs/cyclecloud/jetpackd.log /opt/cycle/jetpack/logs/jetpackd.log
-sudo cp ./sample-logs/cyclecloud/install.log /opt/cycle/jetpack/logs/install.log
-ls /opt/cycle/jetpack/logs
-
-sudo mkdir -p /var/log/slurmctld /var/log/slurmd
-sudo cp ./sample-logs/slurm/slurmctld.log /var/log/slurmctld/slurmctld.log
-sudo cp ./sample-logs/slurm/slurmd.log /var/log/slurmd/slurmd.log
-ls /var/log/slurmctld /var/log/slurmd
-
-sudo mkdir -p /shared/slurm-logs
-sudo cp ./sample-logs/slurm/job-archives/* /shared/slurm-logs/
-ls /shared/slurm-logs
-```
-
-#### Step 2: Verify Log Ingestion
+### Verify Log Ingestion
 
 Wait ~15 minutes for initial log ingestion, then verify in Log Analytics:
 
