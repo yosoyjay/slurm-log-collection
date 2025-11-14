@@ -112,7 +112,7 @@ Expected result: Non-zero counts for active log tables.
 ### Quick Troubleshooting
 
 **No data appearing?**
-- Verify AMA is running: `systemctl status azuremonitoragent`
+- Verify AMA is running on host
 - Check DCR associations in Azure portal
 - Ensure log files exist and have proper permissions
 
