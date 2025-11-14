@@ -187,15 +187,13 @@ syslog_raw_CL
 | order by TimeGenerated desc
 ```
 
-**Scheduler Performance**:
-```kql
-slurmctld_raw_CL
-| where TimeGenerated > ago(1h)
-| parse RawData with "[" Timestamp "] " Level ": " Component ": " Message
-| where Level in ("error", "warning")
-| project TimeGenerated, Level, Component, Message
-| order by TimeGenerated desc
-```
+1. [Azure Monitor Agent](https://learn.microsoft.com/en-us/azure/azure-monitor/agents/azure-monitor-agent-manage?tabs=azure-portal) must be installed and configured on all VMs and Azure Virtual Machine Scale Set (VMSS)
+    - For GB200: The fluentbit binary installed with Azure Monitor Agent must be replaced with a custome build that supports 64K page size.  (See Step 0: Update Fluentbit)"
+2. VM and VMSS must have [system identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities-scale-sets?pivots=identity-mi-methods-azp#enable-system-assigned-managed-identity-on-an-existing-virtual-machine-scale-set) assigned otherwise Azure Monitor Agent will not work
+    - For production deployments: It is recommended to use [user-assigned identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities-scale-sets?pivots=identity-mi-methods-azp#user-assigned-managed-identity) for Virtual Machine Scale Sets. User-assigned identities automatically propagate to individual VMs as they are dynamically created, whereas system-assigned identities must be assigned to each VM at creation time. The user-assigned identity requires the [Monitoring Metrics Publisher](https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/monitor#monitoring-metrics-publisher) role to publish logs and metrics to Azure Monitor.
+3. [Log Analytics Workspace](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/quick-create-workspace?tabs=azure-portal) must be created and accessible
+4. Azure priviliges for creating DCRs and table associations must be granted ([Monitoring Contributor role](https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/monitor#monitoring-contributor)) for entity deploying the script
+5. Environment variables must be set (see `.env` file example below)
 
 **Resource Allocation Patterns**:
 ```kql
@@ -209,21 +207,23 @@ slurmctld_raw_CL
 
 ### System Monitoring
 
-**Kernel Issues on Compute Nodes**:
-```kql
-dmesg_raw_CL
-| where RawData contains "error" or RawData contains "warning"
-| where TimeGenerated > ago(24h)
-| project TimeGenerated, Computer, RawData
-| order by TimeGenerated desc
-```
+See `.env` file for example values:
+```bash
+export RESOURCE_GROUP="<resource-group-name>"
+export WORKSPACE_NAME="<job-analytics-workspace-name>"
+export WORKSPACE_TABLE_NAME="<slurmctld-table-name>"
+export REGION="<centralus>"
+export SUBSCRIPTION_ID="<00000000-0000-0000-0000-000000000000>"
+export VMSS_RG="<vmms-resource-group-name>"
+export VMSS_NAME="<vmss-name>"
+export SLURM_SCHEDULER_VM="<vm-name>"
+export DATA_COLLECTION_RULES_NAME="<dcr-name>"
 
-**CycleCloud Operations**:
-```kql
-jetpack_raw_CL
-| where TimeGenerated > ago(1h)
-| where RawData contains "error" or RawData contains "failed"
-| project TimeGenerated, Computer, RawData
+# DO NOT EDIT BELOW ENV VARS
+export SLURMCTLD_TABLE_NAME="${WORKSPACE_TABLE_NAME}_CL"
+export VMSS_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Compute/virtualMachineScaleSets/${VMSS_NAME}"
+export DCR_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Insights/dataCollectionRules/${DATA_COLLECTION_RULES_NAME}"
+export VM_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Compute/virtualMachines/${SLURM_SCHEDULER_VM}"
 ```
 
 ## Architecture and Design
@@ -333,16 +333,8 @@ Azure Batch GPU nodes with 64K page size require special fluentbit binary:
 3. **Deploy to nodes** using `bin/update-fluent-bit.sh`
 4. **Automate deployment** via VMSS custom script extension
 
-### Performance Tuning
 
-For large clusters, consider:
-
-- **Log rotation**: Implement aggressive rotation for high-volume logs
-- **Sampling**: Use DCR transformations to sample verbose logs
-- **Batching**: Adjust AMA buffer settings for high throughput
-- **Retention**: Set appropriate retention policies in Log Analytics
-
-## Reference
+### Verify Log Ingestion
 
 ### Environment Variables
 
@@ -435,11 +427,4 @@ slurmctld_raw_CL
 syslog_raw_CL
 | parse RawData with Timestamp " " Computer " " Process ": " Message
 | project TimeGenerated, Computer, Timestamp, Process, Message
-```
-
-#### Extract Job Information
-```kql
-slurmjobs_raw_CL
-| parse FilePath with * "/job_" JobId:string "." Extension:string
-| project JobId, Extension, TimeGenerated, Computer, RawData
 ```
