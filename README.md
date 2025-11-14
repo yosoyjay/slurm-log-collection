@@ -1,271 +1,428 @@
-# CycleCloud Slurm cluster log collection
+# CycleCloud Workspace for Slurm Log Collection
 
-## Data to be collected and forwarded to Azure Monitor via Azure Monitor Agent and Data Collection Rules (DCRs).
+A turnkey, customizable log forwarding solution for CycleCloud Workspace for Slurm that centralizes all cluster logs into Azure Monitor Log Analytics. This project addresses the critical operational challenge of distributed AI/ML training: when jobs fail across hundreds or thousands of nodes, quickly identifying root causes from scattered logs becomes incredibly time-consuming, delaying recovery and reducing cluster utilization.
 
-| component | file(s)                              | source             | table                | raw-table            | data-collection-rule   |
-|-----------|--------------------------------------|--------------------|----------------------|----------------------|------------------------|
-| Slurm     | /var/log/slurmctld/slurmctld.log     | scheduler          | slurmctld_CL         | slurmctld_raw_CL     | slurmctld_raw_dcr      |
-| Slurm     | /var/log/slurmd/slurmd.log           | nodes              | slurmd_CL            | slurmd_raw_CL        | slurmd_raw_dcr         |
-| Slurm     | /var/log/slurmctld/slurmdbd.log      | scheduler          | slurmdb_CL           | slurmdb_raw_CL       | slurmdb_raw_dcr        |
-| Slurm     | /var/log/slurm/slurmrestd.log        | scheduler          | slurmrestd_CL        | slurmrestd_raw_CL    | slurmrestd_raw_dcr     |
-| Slurm     | /shared/slurm-logs/*                 | scheduler          | slurmjobs_CL         | slurmjobs_raw_CL     | slurmjobs_raw_dcr      |
-| CC        | /opt/cycle/jetpack/logs/jetpack.log  | scheduler (+nodes) | jetpack_CL           | jetpack_raw_CL       | jetpack_raw_dcr        |
-| CC        | /opt/cycle/jetpack/logs/jetpackd.log | scheduler (+nodes) | jetpackd_CL          | jetpackd_raw_CL      | jetpackd_raw_dcr       |
-| CC        | /opt/healthagent/healthagent.log     | scheduler          | healthagent_CL       | healthagent_raw_CL   | healthagent_raw_dcr    |
-| OS        | /var/log/dmesg                       | nodes              | dmesg_CL             | dmesg_raw_CL         | dmesg_raw_dcr          |
-| OS        | /var/log/syslog                      | scheduler (+nodes) | syslog_CL            | syslog_raw_CL        | syslog_raw_dcr         |
+## Project Overview
 
-## Naming Template
+### What This Project Does
 
-The Data Collection Rules follow a consistent naming pattern:
+This solution automatically collects logs from all components of your Slurm cluster and forwards them to Azure Monitor, providing:
 
-- Log name: `{service}.log` (e.g., `slurmd.log`)
-- Pattern: `{service}` (extracted from log name, e.g., `slurmd`)
-- Table name: `{pattern}_raw_CL` (e.g., `slurmd_raw_CL`)
-- DCR file name: `{pattern}_raw_dcr.json` (e.g., `slurmd_raw_dcr.json`)
-- Stream: `Custom-Text-{pattern}_raw_CL` (e.g., `Custom-Text-slurmd_raw_CL`)
+- **Centralized Log Management**: All Slurm daemon logs, job archives, and system logs in one place
+- **Job Analysis**: Automatic archival and analysis of Slurm job scripts, outputs, and environment variables
+- **Troubleshooting**: Structured queries to quickly identify cluster issues and performance bottlenecks
 
-Note: The table name in Log Analytics is also the outputStream in the dataFlows defined in the data-collection-rule.
+### Key Benefits
 
-## Slurm Job Archive System
+- **Time-Series Correlation**: Azure Monitor's time-based indexing enables rapid identification of cascading failures. Trace network carrier flaps in syslog to corresponding slurmd communication errors to specific job failures - all within seconds
+- **Centralized Visibility**: Query logs from thousands of nodes through a single interface instead of SSH-ing to individual machines. Correlate Slurm controller decisions with node-level errors and system events in one query
+- **Log Persistence**: Logs survive node deallocations and reimaging - critical in cloud environments where compute nodes are ephemeral
+- **Powerful Query Language**: KQL (Kusto Query Language) allows parsing raw logs into structured fields, filtering across multiple sources, and building operational dashboards
+- **Production-Ready Scalability**: User-assigned managed identities automatically propagate to new VMSS instances, and DCR associations handle thousands of nodes without manual configuration
 
-The Slurm job archive system automatically captures and stores job-related files for analysis and debugging. This system uses prolog and epilog scripts that run on compute nodes to archive:
+### Key Capabilities
+- **Comprehensive Coverage**: Monitors scheduler, compute nodes, job lifecycle, and system components
+- **Modular and Extensible**: Designed to be easily extended for new data sources and processing requirements
+- **Automatic Job Archiving**: Captures job submission scripts, environment variables, stdout/stderr via prolog/epilog scripts
+- **Azure Managed Solution**: Leverages Azure Monitor Agent and Data Collection Rules for reliable, production-ready ingestion
 
-- Job submission scripts:(`job_{jobid}.sh`) - The original sbatch script submitted by users
-- Environment variables: (`job_{jobid}.env`) - Complete environment at job execution time
-- Job output logs: (`job_{jobid}.out`) - Standard output from job execution
-- Job error logs: (`job_{jobid}.err`) - Standard error from job execution
+### Architecture Overview
 
-### Archive Location and Structure
+The solution uses Azure Monitor Agent (AMA) with Data Collection Rules (DCRs) to:
 
-All job files are stored in `/shared/slurm-logs/{username}/` with the following naming convention:
-```
-/shared/slurm-logs/
-├── job_12345.sh    # Job submission script
-├── job_12345.env   # Environment variables
-├── job_12345.out   # Standard output
-├── job_12345.err   # Standard error
-└── job_12346.*     # Next job files
-```
-
-**Periodic (e.g. weekly) bundling and compression of older job files is recommended.**
-
-### Prolog/Epilog Script Configuration
-
-The archive system requires configuring Slurm prolog and epilog scripts, e.g. adding them to `/etc/slurm/{epilog,prolog}.d/` or directly in `slurm.conf`.
-
-### Log Ingestion via Azure Monitor
-
-The archived job files are ingested into Azure Monitor using:
-- DCR: `slurmjobs_raw_dcr` - Monitors `/shared/slurm-logs/*`
-- Table: `slurmjobs_raw_CL` - Stores raw file content with standard schema
-- Association: Applied to scheduler VM where job archive files are accessible
-
-### Sample KQL Queries
-
-KQL is the query language used in Azure Monitor Log Analytics. Below are sample queries to analyze Slurm job archive data.
-
-**View carrier changes (potential link flaps) in the past 48 hours:**
-```kql
-syslog_raw_CL
-| where TimeGenerated > ago(48h)
-| where RawData contains "carrier"
-| project TimeGenerated, Computer, RawData
-```
-
-**View recent job submissions:**
-```kql
-slurmjobs_raw_CL
-| where FilePath contains ".sh"
-| where TimeGenerated > ago(1d)
-| project TimeGenerated, Computer, FilePath, RawData
-| order by TimeGenerated desc
-```
-
-**Analyze job failures:**
-```kql
-slurmjobs_raw_CL
-| where FilePath contains ".err"
-| where RawData contains "error" or RawData contains "failed"
-| project TimeGenerated, Computer, FilePath, RawData
-| order by TimeGenerated desc
-```
-
-**Extract job environment variables:**
-```kql
-slurmjobs_raw_CL
-| where FilePath contains ".env"
-| parse FilePath with * "/job_" JobId:string ".env"
-| parse RawData with EnvVar "=" EnvValue
-| where EnvVar startswith "SLURM_"
-| project JobId, EnvVar, EnvValue, TimeGenerated
-```
+1. **Collect** logs from multiple sources across scheduler and compute nodes
+2. **Transform** raw log data into structured tables in Log Analytics
+3. **Archive** job-related files automatically via prolog/epilog scripts
+4. **Query** data using KQL for monitoring, alerting, and analysis
 
 ## Quick Start Guide
 
 ### Prerequisites
 
-1. Azure Monitor Agent must be installed and configured on all VMs and VMSS
-  - For GB200: The fluentbit binary installed with Azure Monitor Agent must be replaced with a custome build that supports 64K page size.  (See Step 0: Update Fluentbit)"
-2. VM and VMSS must have system identity assigned otherwise Azure Monitor Agent will not work
-3. Log Analytics Workspace must be created and accessible
-4. Azure priviliges for creating DCRs and table associations must be granted (Monitoring Contributor role) for entity deploying the script
-5. Environment variables must be set (see `.env` file example below)
+Before starting, ensure you have:
 
-### Required Environment Variables
+1. **Azure Monitor Agent** installed and configured on all VMs and VMSS
+2. **System Identity** assigned to all VMs and VMSS (required for AMA)
+3. **Log Analytics Workspace** created and accessible
+4. **Azure Permissions**: Monitoring Contributor role for deploying DCRs
+5. **GB200 Specific**: Custom fluentbit binary for 64K page size support (if applicable)
 
-Ensure the following environment variables are set in your shell.
+### Environment Setup
 
-See `.env` file for example values:
+1. **Clone the repository**:
+   ```bash
+   git clone <repository-url>
+   cd slurm-log-collection
+   ```
+
+2. **Configure environment variables** by copying and editing the `.env` file:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your Azure resource details
+   source .env
+   ```
+
+   Required variables:
+   - `RESOURCE_GROUP` - Your resource group name
+   - `WORKSPACE_NAME` - Log Analytics workspace name
+   - `SUBSCRIPTION_ID` - Azure subscription ID
+   - `VM_NAME` - Scheduler VM name
+   - `VMSS_NAME` - Compute nodes VMSS name
+   - `REGION` - Azure region (e.g., centralus)
+
+### Deployment Steps
+
+#### Step 1: Create Log Analytics Tables
 ```bash
-export RESOURCE_GROUP="<resource-group-name>"
-export WORKSPACE_NAME="<job-analytics-workspace-name>"
-export WORKSPACE_TABLE_NAME="<slurmctld-table-name>"
-export REGION="<centralus>"
-export SUBSCRIPTION_ID="<00000000-0000-0000-0000-000000000000>"
-export VMSS_RG="<vmms-resource-group-name>"
-export VMSS_NAME="<vmss-name>"
-export VM_NAME="<vm-name>"
-export DATA_COLLECTION_RULES_NAME="<dcr-name>"
+bash ./bin/create-tables.sh
+```
+Creates all required tables with standardized schema for different log types.
 
-# DO NOT EDIT BELOW ENV VARS
+#### Step 2: Deploy Data Collection Rules
+```bash
+bash ./bin/deploy-dcrs.sh
+```
+Deploys DCR configurations for all log sources (Slurm, OS, CycleCloud components).
+
+#### Step 3: Associate DCRs with Resources
+```bash
+bash ./bin/associate-dcrs.sh
+```
+Automatically associates appropriate DCRs with scheduler VM and compute VMSS.
+
+#### Step 4: [GB200 Only] Update Fluentbit
+```bash
+bash ./bin/update-fluent-bit.sh
+```
+Replaces fluentbit binary with 64K page size compatible version.
+
+### Verification
+
+Wait 15 minutes for initial log ingestion (normal ingestion latency is 30 seconds to 3 minutes), then verify in Log Analytics:
+
+```kql
+// Check if logs are flowing
+union slurmctld_raw_CL, slurmd_raw_CL, syslog_raw_CL
+| where TimeGenerated > ago(1h)
+| summarize count() by $table
+```
+
+Expected result: Non-zero counts for active log tables.
+
+### Quick Troubleshooting
+
+**No data appearing?**
+- Verify AMA is running: `systemctl status azuremonitoragent`
+- Check DCR associations in Azure portal
+- Ensure log files exist and have proper permissions
+
+**GB200 issues?**
+- Verify custom fluentbit binary is deployed
+- Check for 64K page size compatibility errors
+
+## Sample Queries and Use Cases
+
+### Time-Series Correlation Example
+
+One of the most powerful capabilities is tracing cascading failures across the cluster. For example, correlate a network carrier flap detected in syslog to corresponding slurmd communication errors to specific job failures - all within seconds:
+
+```kql
+// Step 1: Identify network carrier changes in the past hour
+let NetworkEvents = syslog_raw_CL
+| where TimeGenerated > ago(1h)
+| where RawData contains "carrier"
+| project NetworkTime=TimeGenerated, NetworkComputer=Computer, NetworkEvent=RawData;
+// Step 2: Find slurmd errors around the same time
+let SlurmErrors = slurmd_raw_CL
+| where TimeGenerated > ago(1h)
+| where RawData contains "error" or RawData contains "timeout"
+| project SlurmTime=TimeGenerated, SlurmComputer=Computer, SlurmError=RawData;
+// Step 3: Correlate events within a 5-minute window
+NetworkEvents
+| join kind=inner (SlurmErrors) on $left.NetworkComputer == $right.SlurmComputer
+| where abs(datetime_diff('minute', NetworkTime, SlurmTime)) <= 5
+| project NetworkTime, SlurmTime, Computer=NetworkComputer, NetworkEvent, SlurmError
+```
+
+### Job Monitoring and Analysis
+
+**Recent Job Submissions**:
+```kql
+slurmjobs_raw_CL
+| where FilePath contains ".sh"
+| where TimeGenerated > ago(24h)
+| parse FilePath with * "/job_" JobId:string ".sh"
+| project TimeGenerated, JobId, Computer, RawData
+| order by TimeGenerated desc
+```
+
+**Job Failure Analysis**:
+```kql
+slurmjobs_raw_CL
+| where FilePath contains ".err"
+| where RawData contains "error" or RawData contains "failed"
+| parse FilePath with * "/job_" JobId:string ".err"
+| project TimeGenerated, JobId, Computer, RawData
+| order by TimeGenerated desc
+```
+
+**Job Resource Usage Patterns**:
+```kql
+slurmjobs_raw_CL
+| where FilePath contains ".env"
+| parse FilePath with * "/job_" JobId:string ".env"
+| parse RawData with EnvVar "=" EnvValue
+| where EnvVar in ("SLURM_CPUS_PER_TASK", "SLURM_MEM_PER_NODE", "SLURM_NNODES")
+| project JobId, EnvVar, EnvValue, TimeGenerated
+```
+
+### Cluster Health and Performance
+
+**Node Communication Issues**:
+```kql
+syslog_raw_CL
+| where TimeGenerated > ago(24h)
+| where RawData contains "carrier" or RawData contains "link"
+| project TimeGenerated, Computer, RawData
+| order by TimeGenerated desc
+```
+
+**Scheduler Performance**:
+```kql
+slurmctld_raw_CL
+| where TimeGenerated > ago(1h)
+| parse RawData with "[" Timestamp "] " Level ": " Component ": " Message
+| where Level in ("error", "warning")
+| project TimeGenerated, Level, Component, Message
+| order by TimeGenerated desc
+```
+
+**Resource Allocation Patterns**:
+```kql
+slurmctld_raw_CL
+| where RawData contains "backfill"
+| where TimeGenerated > ago(24h)
+| parse RawData with * "backfill: " Message
+| summarize count() by bin(TimeGenerated, 1h), Message
+| render timechart
+```
+
+### System Monitoring
+
+**Kernel Issues on Compute Nodes**:
+```kql
+dmesg_raw_CL
+| where RawData contains "error" or RawData contains "warning"
+| where TimeGenerated > ago(24h)
+| project TimeGenerated, Computer, RawData
+| order by TimeGenerated desc
+```
+
+**CycleCloud Operations**:
+```kql
+jetpack_raw_CL
+| where TimeGenerated > ago(1h)
+| where RawData contains "error" or RawData contains "failed"
+| project TimeGenerated, Computer, RawData
+```
+
+## Architecture and Design
+
+### Data Collection Overview
+
+The solution monitors three main categories of components:
+
+#### Slurm Components
+- **slurmctld**: Controller daemon logs from scheduler
+- **slurmd**: Node daemon logs from compute nodes
+- **slurmdb**: Database daemon logs from scheduler
+- **slurmrestd**: REST API daemon logs from scheduler
+- **Job Archives**: Automated collection of job scripts, outputs, and environment
+
+#### System Components
+- **syslog**: System logs from all nodes
+- **dmesg**: Kernel logs from compute nodes
+
+### CycleCloud Components
+- **jetpack/jetpackd**: CycleCloud agent logs for cluster management operations
+- **healthagent**: CycleCloud Healthagent which automatically tests nodes for hardware health and drains nodes that fail tests
+
+### Log Sources and Destinations
+
+| Component | Source File(s) | Nodes | Table | DCR |
+|-----------|----------------|-------|-------|-----|
+| Slurm Controller | /var/log/slurmctld/slurmctld.log | Scheduler | slurmctld_raw_CL | slurmctld_raw_dcr |
+| Slurm Node | /var/log/slurmd/slurmd.log | Compute | slurmd_raw_CL | slurmd_raw_dcr |
+| Slurm Database | /var/log/slurmctld/slurmdbd.log | Scheduler | slurmdb_raw_CL | slurmdb_raw_dcr |
+| Slurm REST API | /var/log/slurm/slurmrestd.log | Scheduler | slurmrestd_raw_CL | slurmrestd_raw_dcr |
+| Job Archives | /shared/slurm-logs/* | Scheduler | slurmjobs_raw_CL | slurmjobs_raw_dcr |
+| System Logs | /var/log/syslog | All | syslog_raw_CL | syslog_raw_dcr |
+| Kernel Logs | /var/log/dmesg | Compute | dmesg_raw_CL | dmesg_raw_dcr |
+| CycleCloud Agent | /opt/cycle/jetpack/logs/jetpack.log | All | jetpack_raw_CL | jetpack_raw_dcr |
+| CycleCloud Daemon | /opt/cycle/jetpack/logs/jetpackd.log | All | jetpackd_raw_CL | jetpackd_raw_dcr |
+| Health Agent | /opt/healthagent/healthagent.log | Scheduler | healthagent_raw_CL | healthagent_raw_dcr |
+
+### Naming Conventions
+
+All components follow a consistent naming pattern:
+
+- **Log Pattern**: `{service}` (extracted from log filename)
+- **Table Name**: `{pattern}_raw_CL`
+- **DCR Filename**: `{pattern}_raw_dcr.json`
+- **Stream Name**: `Custom-Text-{pattern}_raw_CL`
+
+Example: `slurmd.log` → `slurmd` → `slurmd_raw_CL` → `slurmd_raw_dcr.json` → `Custom-Text-slurmd_raw_CL`
+
+### Standard Table Schema
+
+All raw log tables use this unified schema:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| TimeGenerated | datetime | When the log entry was generated |
+| RawData | string | Complete raw log line content |
+| Computer | string | Source computer/VM hostname |
+| FilePath | string | Full path to source log file |
+
+## Advanced Configuration
+
+### Job Archive System
+
+The Slurm job archive system automatically captures comprehensive job data for analysis:
+
+#### Archived Files
+- **Job Scripts** (`job_{jobid}.sh`): Original sbatch submission script
+- **Environment** (`job_{jobid}.env`): Complete environment variables at execution
+- **Standard Output** (`job_{jobid}.out`): Job execution stdout
+- **Standard Error** (`job_{jobid}.err`): Job execution stderr
+
+#### Archive Structure
+```
+/shared/slurm-logs/
+├── job_12345.sh     # Job submission script
+├── job_12345.env    # Environment variables
+├── job_12345.out    # Standard output
+├── job_12345.err    # Standard error
+└── job_12346.*      # Next job files
+```
+
+#### Implementation Requirements
+Configure Slurm prolog and epilog scripts by either:
+1. Adding scripts to `/etc/slurm/{epilog,prolog}.d/`
+2. Setting `Prolog` and `Epilog` parameters directly in `slurm.conf`
+
+**Recommendation**: Implement periodic (weekly) compression and archival of older job files to manage storage growth.
+
+### Custom DCR Creation
+
+To create additional DCRs for custom log sources:
+
+1. **Copy existing DCR** from `data-collection-rules/` directory
+2. **Modify key fields**:
+   - `dataFlows[].outputStream` - Must match table name
+   - `dataSources.logFiles[].filePatterns` - Log file paths
+   - `dataSources.logFiles[].name` - Unique stream identifier
+3. **Deploy using**: `az monitor data-collection rule create`
+
+### GB200 Configuration
+
+Azure Batch GPU nodes with 64K page size require special fluentbit binary:
+
+1. **Build or obtain** 64K page size compatible fluentbit
+2. **Place binary** in path specified by `FLUENT_BIT_SOURCE_PATH`
+3. **Deploy to nodes** using `bin/update-fluent-bit.sh`
+4. **Automate deployment** via VMSS custom script extension
+
+### Performance Tuning
+
+For large clusters, consider:
+
+- **Log rotation**: Implement aggressive rotation for high-volume logs
+- **Sampling**: Use DCR transformations to sample verbose logs
+- **Batching**: Adjust AMA buffer settings for high throughput
+- **Retention**: Set appropriate retention policies in Log Analytics
+
+## Reference
+
+### Environment Variables
+
+#### Required Variables
+```bash
+# Azure Resource Configuration
+export RESOURCE_GROUP="<resource-group-name>"
+export SUBSCRIPTION_ID="<subscription-id>"
+export REGION="<azure-region>"
+
+# Log Analytics Configuration
+export WORKSPACE_NAME="<workspace-name>"
+export WORKSPACE_TABLE_NAME="<base-table-name>"
+
+# VM and VMSS Configuration
+export VM_NAME="<scheduler-vm-name>"
+export VMSS_RG="<vmss-resource-group>"
+export VMSS_NAME="<vmss-name>"
+export DATA_COLLECTION_RULES_NAME="<dcr-base-name>"
+```
+
+#### Auto-Generated Variables
+```bash
+# These are automatically derived - do not modify
 export SLURMCTLD_TABLE_NAME="${WORKSPACE_TABLE_NAME}_CL"
 export VMSS_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Compute/virtualMachineScaleSets/${VMSS_NAME}"
 export DCR_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Insights/dataCollectionRules/${DATA_COLLECTION_RULES_NAME}"
 export VM_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Compute/virtualMachines/${VM_NAME}"
 ```
 
-### Step-by-Step Setup deployment of log collection
+### Directory Structure
 
-#### Step 0: [Applicable only on GB200] Update Fluentbit for 64K page size support
+```
+slurm-log-collection/
+├── bin/                          # Deployment scripts
+│   ├── create-tables.sh          # Create Log Analytics tables
+│   ├── deploy-dcrs.sh            # Deploy all DCRs
+│   ├── associate-dcrs.sh         # Associate DCRs with resources
+│   └── update-fluent-bit.sh      # GB200 fluentbit update
+├── data-collection-rules/        # DCR JSON configurations
+│   ├── slurm/                    # Slurm component DCRs
+│   ├── os/                       # Operating system DCRs
+│   └── cyclecloud/              # CycleCloud component DCRs
+├── sample-logs/                  # Test data for validation
+├── .env.example                  # Environment variable template
+└── README.md                     # This documentation
+```
 
-Replace the fluentbit binary installed with Azure Monitor Agent with a custom build that supports 64K page size.
+### Sample Log Formats
 
-- Download or build a custom fluentbit binary with 64K page size support and place in FLUENT_BIT_SOURCE_PATH defined in bin/update-fluent-bit.sh (default: "/shared/fluent-bit")
-- Run the update script on all VMs to replace the fluentbit binary
-- Configure a VMSS to run the script on all new instances (e.g. using CycleCloud, Ansible, etc.)
+#### Slurm Logs
+```
+[2025-09-08T21:11:35.869] debug: sched/backfill: _attempt_backfill: no jobs to backfill
+[2025-09-08T21:12:05.013] debug: sackd_mgr_dump_state: saved state of 0 nodes
+```
 
-With `.env` being configured, first let's source the file.
+#### System Logs
+```
+Sep  8 21:11:35 node001 kernel: [12345.678901] usb 1-1: new high-speed USB device number 2 using ehci-pci
+Sep  8 21:12:05 node001 NetworkManager[1234]: <info> device (eth0): carrier is ON
+```
 
+#### Job Archive Files
 ```bash
-source ./.env
+# job_12345.sh
+#!/bin/bash
+#SBATCH --job-name=test_job
+#SBATCH --output=output_%j.out
+#SBATCH --ntasks=1
+echo "Hello World"
+
+# job_12345.env
+SLURM_JOB_ID=12345
+SLURM_NTASKS=1
+SLURM_CPUS_PER_TASK=1
 ```
 
-#### Step 1: Create Log Analytics Tables
+### KQL Parsing Patterns
 
-Run the provided script to create all required tables:
-
-```bash
-bash ./bin/create-tables.sh
-```
-
-This creates the following raw data tables with standard schema:
-- `slurmctld_raw_CL` - Slurm controller daemon logs
-- `slurmd_raw_CL` - Slurm node daemon logs
-- `slurmdb_raw_CL` - Slurm database daemon logs
-- `slurmrestd_raw_CL` - Slurm REST API daemon logs
-- `slurmjobs_raw_CL` - Slurm job archive files (scripts, env, output, errors)
-- `syslog_raw_CL` - System logs (/var/log/syslog)
-- `dmesg_raw_CL` - Kernel logs (/var/log/dmesg)
-- `jetpack_raw_CL` - CycleCloud jetpack logs
-- `jetpackd_raw_CL` - CycleCloud jetpack daemon logs
-- `healthagent_raw_CL` - CycleCloud health agent logs
-
-Standard Raw Table Schema:
-```
-TimeGenerated (datetime) - When the log entry was generated
-RawData (string) - The complete raw log line
-Computer (string) - Source computer/VM name
-FilePath (string) - Path to the source log file
-```
-
-#### Step 2: Deploy Data Collection Rules
-
-Deploy all DCR configurations:
-
-```bash
-bash ./bin/deploy-dcrs.sh
-```
-
-This deploys DCR JSON files from the `data-collection-rules/` directory:
-- `data-collection-rules/slurm/` - Slurm-related DCRs (slurmctld, slurmd, slurmdb, slurmrestd, slurmjobs)
-- `data-collection-rules/os/` - Operating system DCRs (syslog, dmesg)
-- `data-collection-rules/cyclecloud/` - CycleCloud DCRs (jetpack, jetpackd, healthagent)
-
-#### Step 3: Associate DCRs with VMs
-
-Associate all DCRs with the appropriate VMs using the provided script:
-
-```bash
-bash ./bin/associate-dcrs.sh
-```
-
-This script automatically:
-- Associates scheduler-specific DCRs with the scheduler VM (VM_ID from .env)
-- Associates compute-node DCRs with the compute VMSS (VMSS_ID from .env)
-- Associates shared DCRs (syslog, jetpack, etc.) with both scheduler and compute nodes
-- Provides detailed output showing which DCRs are associated with which resources
-
-#### Step 3b [Optional]: Copy sample test data in designated dirs
-
-If you want to first test it with the sample data provided in the repo, run the below commands
-
-```bash
-sudo mkdir -p /opt/healthagent
-sudo cp ./sample-logs/cyclecloud/healthagent.log /opt/healthagent/healthagent_raw_dcr.json
-ls /opt/healthagent
-
-sudo mkdir -p /opt/cycle/jetpack/logs
-sudo cp ./sample-logs/cyclecloud/jetpack.log /opt/cycle/jetpack/logs/jetpack.log
-sudo cp ./sample-logs/cyclecloud/jetpackd.log /opt/cycle/jetpack/logs/jetpackd.log
-sudo cp ./sample-logs/cyclecloud/install.log /opt/cycle/jetpack/logs/install.log
-ls /opt/cycle/jetpack/logs
-
-sudo mkdir -p /var/log/slurmctld
-sudo cp ./sample-logs/slurm/slurmctld.log /var/log/slurmctld/slurmctld.log
-sudo cp ./sample-logs/slurm/slurmd.log /var/log/slurmd/slurmd.log
-ls /var/log/slurmctld
-
-sudo mkdir -p /shared/slurm-logs
-sudo cp ./sample-logs/slurm/job-archives/* /shared/slurm-logs/
-ls /shared/slurm-logs
-```
-
-#### Step 4: Verify Log Ingestion
-
-Wait ~15 minutes for initial log ingestion, then verify in Log Analytics:
-
-```kql
-// Check slurmctld logs
-slurmctld_raw_CL
-| take 10
-
-// Check slurmd logs
-slurmd_raw_CL
-| take 10
-
-// Check slurmjobs logs (job archives)
-slurmjobs_raw_CL
-| take 10
-
-// Check system logs
-syslog_raw_CL
-| take 10
-```
-
-## Data Processing and Transformation
-
-### Log Format Examples
-
-**Slurm Log Format** (slurmctld.log, slurmd.log):
-```
-[2025-09-08T21:11:35.869] debug:  sched/backfill: _attempt_backfill: no jobs to backfill
-[2025-09-08T21:12:05.013] debug:  sackd_mgr_dump_state: saved state of 0 nodes
-```
-
-### KQL Parsing Examples
-
-**Parse Slurm logs** into structured fields:
+#### Parse Slurm Structured Logs
 ```kql
 slurmctld_raw_CL
 | parse RawData with "[" Timestamp "] " Level ": " Component ": " Message
@@ -273,9 +430,16 @@ slurmctld_raw_CL
 | project TimeGenerated, Computer, Timestamp, Level, Component, Message
 ```
 
-**Parse system logs**:
+#### Parse System Logs
 ```kql
 syslog_raw_CL
 | parse RawData with Timestamp " " Computer " " Process ": " Message
 | project TimeGenerated, Computer, Timestamp, Process, Message
+```
+
+#### Extract Job Information
+```kql
+slurmjobs_raw_CL
+| parse FilePath with * "/job_" JobId:string "." Extension:string
+| project JobId, Extension, TimeGenerated, Computer, RawData
 ```
