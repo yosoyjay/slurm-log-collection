@@ -41,13 +41,10 @@ The solution uses Azure Monitor Agent (AMA) with Data Collection Rules (DCRs) to
 
 Before starting, ensure you have:
 
-1. [Azure Monitor Agent](https://learn.microsoft.com/en-us/azure/azure-monitor/agents/azure-monitor-agent-manage?tabs=azure-portal) must be installed and configured on all VMs and Azure Virtual Machine Scale Set (VMSS).
-    - For GB200: The fluentbit binary installed with Azure Monitor Agent must be replaced with a custome build that supports 64K page size.  (See Step 0: Update Fluentbit)"
-2. VM and VMSS must have a [system or user-assigned identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities-scale-sets?pivots=identity-mi-methods-azp#enable-system-assigned-managed-identity-on-an-existing-virtual-machine-scale-set) assigned otherwise Azure Monitor Agent will not work.
+1. VM and VMSS must have a [system or user-assigned identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities-scale-sets?pivots=identity-mi-methods-azp#enable-system-assigned-managed-identity-on-an-existing-virtual-machine-scale-set) assigned otherwise Azure Monitor Agent will not work.
     - For production deployments: It is recommended to use [user-assigned identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities-scale-sets?pivots=identity-mi-methods-azp#user-assigned-managed-identity) for Virtual Machine Scale Sets. User-assigned identities automatically propagate to individual VMs as they are dynamically created, whereas system-assigned identities must be assigned to each VM at creation time. The user-assigned identity requires the [Monitoring Metrics Publisher](https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/monitor#monitoring-metrics-publisher) role to publish logs and metrics to Azure Monitor.
-3. [Log Analytics Workspace](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/quick-create-workspace?tabs=azure-portal) must be created and accessible.
-4. Azure privileges for creating DCRs and table associations must be granted ([Monitoring Contributor role](https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/monitor#monitoring-contributor)) for entity deploying the script.
-5. Environment variables must be set (see `.env` file example below).
+2. Azure privileges for creating DCRs and table associations must be granted ([Monitoring Contributor role](https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/monitor#monitoring-contributor)) for entity deploying the script.
+3. Environment variables must be set (see `.env` file example below).
 
 ### Environment Setup
 
