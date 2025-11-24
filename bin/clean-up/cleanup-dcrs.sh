@@ -8,8 +8,6 @@ if [ -z "$RESOURCE_GROUP" ]; then
     echo "Required variables:"
     echo "  RESOURCE_GROUP - Azure resource group name"
     echo
-    echo "Example:"
-    echo "  export RESOURCE_GROUP='your-resource-group'"
     exit 1
 fi
 

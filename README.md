@@ -41,13 +41,10 @@ The solution uses Azure Monitor Agent (AMA) with Data Collection Rules (DCRs) to
 
 Before starting, ensure you have:
 
-1. [Azure Monitor Agent](https://learn.microsoft.com/en-us/azure/azure-monitor/agents/azure-monitor-agent-manage?tabs=azure-portal) must be installed and configured on all VMs and Azure Virtual Machine Scale Set (VMSS).
-    - For GB200: The fluentbit binary installed with Azure Monitor Agent must be replaced with a custome build that supports 64K page size.  (See Step 0: Update Fluentbit)"
-2. VM and VMSS must have [system identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities-scale-sets?pivots=identity-mi-methods-azp#enable-system-assigned-managed-identity-on-an-existing-virtual-machine-scale-set) assigned otherwise Azure Monitor Agent will not work.
+1. VM and VMSS must have a [system or user-assigned identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities-scale-sets?pivots=identity-mi-methods-azp#enable-system-assigned-managed-identity-on-an-existing-virtual-machine-scale-set) assigned otherwise Azure Monitor Agent will not work.
     - For production deployments: It is recommended to use [user-assigned identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities-scale-sets?pivots=identity-mi-methods-azp#user-assigned-managed-identity) for Virtual Machine Scale Sets. User-assigned identities automatically propagate to individual VMs as they are dynamically created, whereas system-assigned identities must be assigned to each VM at creation time. The user-assigned identity requires the [Monitoring Metrics Publisher](https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/monitor#monitoring-metrics-publisher) role to publish logs and metrics to Azure Monitor.
-3. [Log Analytics Workspace](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/quick-create-workspace?tabs=azure-portal) must be created and accessible.
-4. Azure privileges for creating DCRs and table associations must be granted ([Monitoring Contributor role](https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/monitor#monitoring-contributor)) for entity deploying the script.
-5. Environment variables must be set (see `.env` file example below).
+2. Azure privileges for creating DCRs and table associations must be granted ([Monitoring Contributor role](https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/monitor#monitoring-contributor)) for entity deploying the script.
+3. Environment variables must be set (see `.env` file example below).
 
 ### Environment Setup
 
@@ -65,34 +62,40 @@ Before starting, ensure you have:
    ```
 
    Required variables:
-   - `RESOURCE_GROUP` - Your resource group name
-   - `WORKSPACE_NAME` - Log Analytics workspace name
    - `SUBSCRIPTION_ID` - Azure subscription ID
-   - `VM_NAME` - Scheduler VM name
-   - `VMSS_NAME` - Compute nodes VMSS name
    - `REGION` - Azure region (e.g., centralus)
+   - `RESOURCE_GROUP` - Your resource group name. Assumes all resources are in single resource group
+   - `SCHEDULER_VM_NAME` - Scheduler VM name
+   - `VMSS_NAME` - Compute nodes VMSS name
+   - `WORKSPACE_NAME` - Name of Log Analytics workspace where logs will be forwarded to
 
 ### Deployment Steps
 
-#### Step 1: Create Log Analytics Tables
+#### Step 1: Install Azure Monitor Agent on VMs and VM Scale Sets that you will be collecting logs from
+
+```bash
+bash ./bin/install-azure-monitor-agent.sh
+```
+
+#### Step 2: Create Log Analytics Tables
 ```bash
 bash ./bin/create-tables.sh
 ```
 Creates all required tables with standardized schema for different log types.
 
-#### Step 2: Deploy Data Collection Rules
+#### Step 3: Deploy Data Collection Rules
 ```bash
 bash ./bin/deploy-dcrs.sh
 ```
 Deploys DCR configurations for all log sources (Slurm, OS, CycleCloud components).
 
-#### Step 3: Associate DCRs with Resources
+#### Step 4: Associate DCRs with Resources
 ```bash
 bash ./bin/associate-dcrs.sh
 ```
 Automatically associates appropriate DCRs with scheduler VM and compute VMSS.
 
-#### Step 4: [GB200 Only] Update Fluentbit
+#### Step 5: [GB200 Only] Update Fluentbit
 ```bash
 bash ./bin/update-fluent-bit.sh
 ```
@@ -110,17 +113,6 @@ union slurmctld_raw_CL, slurmd_raw_CL, syslog_raw_CL
 ```
 
 Expected result: Non-zero counts for active log tables.
-
-### Quick Troubleshooting
-
-**No data appearing?**
-- Verify AMA is running on host
-- Check DCR associations in Azure portal
-- Ensure log files exist and have proper permissions
-
-**GB200 issues?**
-- Verify custom fluentbit binary is deployed
-- Check for 64K page size compatibility errors
 
 ## Sample Queries and Use Cases
 
@@ -198,27 +190,6 @@ slurmctld_raw_CL
 | parse RawData with * "backfill: " Message
 | summarize count() by bin(TimeGenerated, 1h), Message
 | render timechart
-```
-
-### System Monitoring
-
-See `.env` file for example values:
-```bash
-export RESOURCE_GROUP="<resource-group-name>"
-export WORKSPACE_NAME="<job-analytics-workspace-name>"
-export WORKSPACE_TABLE_NAME="<slurmctld-table-name>"
-export REGION="<centralus>"
-export SUBSCRIPTION_ID="<00000000-0000-0000-0000-000000000000>"
-export VMSS_RG="<vmms-resource-group-name>"
-export VMSS_NAME="<vmss-name>"
-export SLURM_SCHEDULER_VM="<vm-name>"
-export DATA_COLLECTION_RULES_NAME="<dcr-name>"
-
-# DO NOT EDIT BELOW ENV VARS
-export SLURMCTLD_TABLE_NAME="${WORKSPACE_TABLE_NAME}_CL"
-export VMSS_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Compute/virtualMachineScaleSets/${VMSS_NAME}"
-export DCR_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Insights/dataCollectionRules/${DATA_COLLECTION_RULES_NAME}"
-export VM_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Compute/virtualMachines/${SLURM_SCHEDULER_VM}"
 ```
 
 ## Architecture and Design
@@ -328,54 +299,23 @@ Azure Batch GPU nodes with 64K page size require special fluentbit binary:
 3. **Deploy to nodes** using `bin/update-fluent-bit.sh`
 4. **Automate deployment** via VMSS custom script extension
 
-
-### Verify Log Ingestion
-
-### Environment Variables
-
-#### Required Variables
-```bash
-# Azure Resource Configuration
-export RESOURCE_GROUP="<resource-group-name>"
-export SUBSCRIPTION_ID="<subscription-id>"
-export REGION="<azure-region>"
-
-# Log Analytics Configuration
-export WORKSPACE_NAME="<workspace-name>"
-export WORKSPACE_TABLE_NAME="<base-table-name>"
-
-# VM and VMSS Configuration
-export VM_NAME="<scheduler-vm-name>"
-export VMSS_RG="<vmss-resource-group>"
-export VMSS_NAME="<vmss-name>"
-export DATA_COLLECTION_RULES_NAME="<dcr-base-name>"
-```
-
-#### Auto-Generated Variables
-```bash
-# These are automatically derived - do not modify
-export SLURMCTLD_TABLE_NAME="${WORKSPACE_TABLE_NAME}_CL"
-export VMSS_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Compute/virtualMachineScaleSets/${VMSS_NAME}"
-export DCR_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Insights/dataCollectionRules/${DATA_COLLECTION_RULES_NAME}"
-export VM_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Compute/virtualMachines/${VM_NAME}"
-```
-
 ### Directory Structure
 
 ```
 slurm-log-collection/
-├── bin/                          # Deployment scripts
-│   ├── create-tables.sh          # Create Log Analytics tables
-│   ├── deploy-dcrs.sh            # Deploy all DCRs
-│   ├── associate-dcrs.sh         # Associate DCRs with resources
-│   └── update-fluent-bit.sh      # GB200 fluentbit update
-├── data-collection-rules/        # DCR JSON configurations
-│   ├── slurm/                    # Slurm component DCRs
-│   ├── os/                       # Operating system DCRs
-│   └── cyclecloud/              # CycleCloud component DCRs
-├── sample-logs/                  # Test data for validation
-├── .env.example                  # Environment variable template
-└── README.md                     # This documentation
+├── bin/                               # Deployment scripts
+|   |-- install-azure-monitor-agent.sh # Install Azure Monitor Agent
+│   ├── create-tables.sh               # Create Log Analytics tables
+│   ├── deploy-dcrs.sh                 # Deploy all DCRs
+│   ├── associate-dcrs.sh              # Associate DCRs with resources
+│   └── update-fluent-bit.sh           # GB200 fluentbit update
+├── data-collection-rules/             # DCR JSON configurations
+│   ├── slurm/                         # Slurm component DCRs
+│   ├── os/                            # Operating system DCRs
+│   └── cyclecloud/                    # CycleCloud component DCRs
+├── sample-logs/                       # Test data for validation
+├── .env.example                       # Environment variable template
+└── README.md                          # This documentation
 ```
 
 ### Sample Log Formats
