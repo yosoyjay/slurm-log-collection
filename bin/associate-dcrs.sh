@@ -15,12 +15,7 @@ if [ -z "$RESOURCE_GROUP" ] || [ -z "$SUBSCRIPTION_ID" ] || [ -z "$VM_ID" ] || [
     echo "  SUBSCRIPTION_ID - Azure subscription ID"
     echo "  VM_ID - Resource ID of the scheduler VM"
     echo "  VMSS_ID - Resource ID of the compute nodes VMSS"
-    echo
-    echo "Example:"
-    echo "  export RESOURCE_GROUP='dcr-resource-group'"
-    echo "  export SUBSCRIPTION_ID='12345678-1234-1234-1234-123456789012'"
-    echo "  export VM_ID='/subscriptions/.../virtualMachines/scheduler-vm'"
-    echo "  export VMSS_ID='/subscriptions/.../virtualMachineScaleSets/compute-vmss'"
+    echo ""
     exit 1
 fi
 
@@ -71,9 +66,10 @@ create_dcr_association "slurmctld_raw_dcr" "$VM_ID" "slurmctld-${SCHEDULER_VM_NA
 create_dcr_association "slurmdb_raw_dcr" "$VM_ID" "slurmdb-${SCHEDULER_VM_NAME}-association" "Slurm database daemon logs"
 create_dcr_association "slurmrestd_raw_dcr" "$VM_ID" "slurmrestd-${SCHEDULER_VM_NAME}-association" "Slurm REST API daemon logs"
 create_dcr_association "slurmjobs_raw_dcr" "$VM_ID" "slurmjobs-${SCHEDULER_VM_NAME}-association" "Slurm job archive logs"
-create_dcr_association "healthagent_raw_dcr" "$VM_ID" "healthagent-${SCHEDULER_VM_NAME}-association" "CycleCloud health agent logs"
 
 # Scheduler + nodes DCRs (logs exist on both scheduler and nodes)
+create_dcr_association "healthagent_raw_dcr" "$VM_ID" "healthagent-${SCHEDULER_VM_NAME}-association" "CycleCloud health agent logs"
+create_dcr_association "dmesg_raw_dcr" "$VM_ID" "dmesg-${VM_NAME}-association" "Kernel logs from from scheduler"
 create_dcr_association "syslog_raw_dcr" "$VM_ID" "syslog-${SCHEDULER_VM_NAME}-association" "System logs from scheduler"
 create_dcr_association "jetpack_raw_dcr" "$VM_ID" "jetpack-${SCHEDULER_VM_NAME}-association" "CycleCloud jetpack logs from scheduler"
 create_dcr_association "jetpackd_raw_dcr" "$VM_ID" "jetpackd-${SCHEDULER_VM_NAME}-association" "CycleCloud jetpack daemon logs from scheduler"
@@ -84,9 +80,10 @@ echo
 
 # VMSS-specific DCRs (logs only exist on compute nodes)
 create_dcr_association "slurmd_raw_dcr" "$VMSS_ID" "slurmd-${VMSS_NAME}-association" "Slurm node daemon logs"
-create_dcr_association "dmesg_raw_dcr" "$VMSS_ID" "dmesg-${VMSS_NAME}-association" "Kernel logs from compute nodes"
 
 # Scheduler + nodes DCRs (logs exist on both scheduler and nodes)
+create_dcr_association "healthagent_raw_dcr" "$VMSS_ID" "healthagent-${VMSS_NAME}-association" "CycleCloud health agent logs"
+create_dcr_association "dmesg_raw_dcr" "$VMSS_ID" "dmesg-${VMSS_NAME}-association" "Kernel logs from compute nodes"
 create_dcr_association "syslog_raw_dcr" "$VMSS_ID" "syslog-${VMSS_NAME}-association" "System logs from compute nodes"
 create_dcr_association "jetpack_raw_dcr" "$VMSS_ID" "jetpack-${VMSS_NAME}-association" "CycleCloud jetpack logs from compute nodes"
 create_dcr_association "jetpackd_raw_dcr" "$VMSS_ID" "jetpackd-${VMSS_NAME}-association" "CycleCloud jetpack daemon logs from compute nodes"
@@ -110,6 +107,7 @@ echo "  jetpackd_raw_dcr - CycleCloud jetpack daemon logs"
 echo
 echo "Compute VMSS ($VMSS_NAME):"
 echo "  slurmd_raw_dcr - Slurm node daemon logs"
+echo "  healthagent_raw_dcr - CycleCloud health agent logs"
 echo "  dmesg_raw_dcr - Kernel logs"
 echo "  syslog_raw_dcr - System logs"
 echo "  jetpack_raw_dcr - CycleCloud jetpack logs"

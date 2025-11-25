@@ -41,6 +41,7 @@ The solution uses Azure Monitor Agent (AMA) with Data Collection Rules (DCRs) to
 
 Before starting, ensure you have:
 
+<<<<<<< HEAD
 1. [Azure Monitor Agent](https://learn.microsoft.com/en-us/azure/azure-monitor/agents/azure-monitor-agent-manage?tabs=azure-portal) must be installed and configured on all VMs and Azure Virtual Machine Scale Set (VMSS).
     - For GB200: The fluentbit binary installed with Azure Monitor Agent must be replaced with a custome build that supports 64K page size.  (See Step 0: Update Fluentbit)"
 2. VM and VMSS must have [system identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities-scale-sets?pivots=identity-mi-methods-azp#enable-system-assigned-managed-identity-on-an-existing-virtual-machine-scale-set) assigned otherwise Azure Monitor Agent will not work.
@@ -48,6 +49,17 @@ Before starting, ensure you have:
 3. [Log Analytics Workspace](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/quick-create-workspace?tabs=azure-portal) must be created and accessible.
 4. Azure privileges for creating DCRs and table associations must be granted ([Monitoring Contributor role](https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/monitor#monitoring-contributor)) for entity deploying the script.
 5. Environment variables must be set (see `.env` file example below).
+=======
+1. **Azure Permissions**: The deployment scripts require the following permissions:
+    - [Monitoring Contributor role](https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/monitor#monitoring-contributor) - Required to create DCRs, tables, and assign permissions
+    - Permissions to create and assign managed identities to VMs and VMSS
+    - Note: Step 1 automatically creates a user-assigned identity and Step 5 assigns the necessary [Monitoring Metrics Publisher](https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/monitor#monitoring-metrics-publisher) role
+2. **Azure Resources**: Existing Slurm cluster with:
+    - Scheduler VM
+    - Compute node VMSS
+    - Log Analytics workspace (or the scripts will create one)
+3. **Environment variables** must be set (see Environment Setup section below)
+>>>>>>> 2e2facc (Simplify identity creation and utilities for fluent-bit update.)
 
 ### Environment Setup
 
@@ -59,7 +71,7 @@ Before starting, ensure you have:
 
 2. **Configure environment variables** by copying and editing the `.env` file:
    ```bash
-   cp .env.example .env
+   cp env.sample .env
    # Edit .env with your Azure resource details
    source .env
    ```
@@ -74,27 +86,62 @@ Before starting, ensure you have:
 
 ### Deployment Steps
 
+<<<<<<< HEAD
 #### Step 1: Create Log Analytics Tables
+=======
+#### Step 1: Create and Assign Managed Identity
+
+```bash
+bash ./bin/create-managed-identity.sh
+```
+Creates a user-assigned managed identity named "ama-monitoring-identity" and assigns it to the scheduler VM and compute VMSS. Permissions will be granted in Step 5 after DCRs are created.
+
+#### Step 2: Install Azure Monitor Agent on VMs and VM Scale Sets that you will be collecting logs from
+
+```bash
+bash ./bin/install-azure-monitor-agent.sh
+```
+
+#### Step 3: Create Log Analytics Tables
+>>>>>>> 2e2facc (Simplify identity creation and utilities for fluent-bit update.)
 ```bash
 bash ./bin/create-tables.sh
 ```
 Creates all required tables with standardized schema for different log types.
 
+<<<<<<< HEAD
 #### Step 2: Deploy Data Collection Rules
+=======
+#### Step 4: Deploy Data Collection Rules
+>>>>>>> 2e2facc (Simplify identity creation and utilities for fluent-bit update.)
 ```bash
 bash ./bin/deploy-dcrs.sh
 ```
 Deploys DCR configurations for all log sources (Slurm, OS, CycleCloud components).
 
+<<<<<<< HEAD
 #### Step 3: Associate DCRs with Resources
+=======
+#### Step 5: Assign DCR Permissions to Managed Identity
+```bash
+bash ./bin/assign-dcr-permissions.sh
+```
+Grants the managed identity the Monitoring Metrics Publisher role on each Data Collection Rule.
+
+#### Step 6: Associate DCRs with Resources
+>>>>>>> 2e2facc (Simplify identity creation and utilities for fluent-bit update.)
 ```bash
 bash ./bin/associate-dcrs.sh
 ```
 Automatically associates appropriate DCRs with scheduler VM and compute VMSS.
 
+<<<<<<< HEAD
 #### Step 4: [GB200 Only] Update Fluentbit
+=======
+#### Step 7: [GB200 Only] Update Fluentbit on each GB200 node.  Assumes fluentbit has been recompiled for 64K pages and is on shared disk.
+>>>>>>> 2e2facc (Simplify identity creation and utilities for fluent-bit update.)
 ```bash
-bash ./bin/update-fluent-bit.sh
+(on-node) ./bin/update-fluent-bit.sh
 ```
 Replaces fluentbit binary with 64K page size compatible version.
 
@@ -111,6 +158,7 @@ union slurmctld_raw_CL, slurmd_raw_CL, syslog_raw_CL
 
 Expected result: Non-zero counts for active log tables.
 
+<<<<<<< HEAD
 ### Quick Troubleshooting
 
 **No data appearing?**
@@ -121,6 +169,17 @@ Expected result: Non-zero counts for active log tables.
 **GB200 issues?**
 - Verify custom fluentbit binary is deployed
 - Check for 64K page size compatibility errors
+=======
+### Utility Scripts
+
+**FYI**: The repository includes a utility script for inspecting your current deployment:
+
+```bash
+bash ./bin/list-current-logging-resources.sh
+```
+
+This script lists all deployed Data Collection Rules, DCR associations with VMs/VMSS, and Log Analytics tables. Useful for troubleshooting and verifying your deployment configuration.
+>>>>>>> 2e2facc (Simplify identity creation and utilities for fluent-bit update.)
 
 ## Sample Queries and Use Cases
 
@@ -321,12 +380,23 @@ To create additional DCRs for custom log sources:
 
 ### GB200 Configuration
 
-Azure Batch GPU nodes with 64K page size require special fluentbit binary:
+Azure Batch GPU nodes with 64K page size require a special fluent-bit binary:
 
-1. **Build or obtain** 64K page size compatible fluentbit
-2. **Place binary** in path specified by `FLUENT_BIT_SOURCE_PATH`
-3. **Deploy to nodes** using `bin/update-fluent-bit.sh`
-4. **Automate deployment** via VMSS custom script extension
+1. **Build or obtain** a 64K page size compatible fluent-bit binary
+2. **Place binary** on a shared path accessible to all nodes (default: `/shared/fluent-bit`)
+3. **Deploy to nodes** using one of these methods:
+
+   **Option A: CycleCloud Project (Recommended for CycleCloud Clusters)**
+
+   Upload and attach the `cyclecloud-projects/slurm-log-monitoring` project to your cluster. The project:
+   - Automatically detects nodes with 64KB page size during cluster-init
+   - Updates fluent-bit binary from the configured path
+   - Default path: `/shared/fluent-bit` (configurable via `slurm-log-monitoring.fluent_bit_source_path`)
+   - See `cyclecloud-projects/slurm-log-monitoring/README.md` for detailed setup instructions
+
+   **Option B: Manual Execution**
+
+   Run `bin/update-fluent-bit.sh` directly on each node that requires the update. Useful for existing provisioned nodes or non-CycleCloud deployments.
 
 
 ### Verify Log Ingestion
@@ -364,6 +434,7 @@ export VM_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}
 
 ```
 slurm-log-collection/
+<<<<<<< HEAD
 ├── bin/                          # Deployment scripts
 │   ├── create-tables.sh          # Create Log Analytics tables
 │   ├── deploy-dcrs.sh            # Deploy all DCRs
@@ -376,6 +447,30 @@ slurm-log-collection/
 ├── sample-logs/                  # Test data for validation
 ├── .env.example                  # Environment variable template
 └── README.md                     # This documentation
+=======
+├── bin/                               # Deployment scripts
+│   ├── create-managed-identity.sh     # Create and assign managed identity
+│   ├── install-azure-monitor-agent.sh # Install Azure Monitor Agent
+│   ├── create-tables.sh               # Create Log Analytics tables
+│   ├── deploy-dcrs.sh                 # Deploy all DCRs
+│   ├── assign-dcr-permissions.sh      # Assign permissions to managed identity
+│   ├── associate-dcrs.sh              # Associate DCRs with resources
+│   └── update-fluent-bit.sh           # GB200 fluentbit update
+├── cyclecloud-projects/               # CycleCloud projects
+│   └── slurm-log-monitoring/          # Auto-update fluent-bit on 64KB nodes
+│       ├── project.ini                # Project metadata
+│       ├── README.md                  # Project documentation
+│       └── specs/default/cluster-init/
+│           ├── scripts/               # Cluster-init scripts
+│           └── files/                 # Project files
+├── data-collection-rules/             # DCR JSON configurations
+│   ├── slurm/                         # Slurm component DCRs
+│   ├── os/                            # Operating system DCRs
+│   └── cyclecloud/                    # CycleCloud component DCRs
+├── sample-logs/                       # Test data for validation
+├── env.sample                         # Environment variable template
+└── README.md                          # This documentation
+>>>>>>> 2e2facc (Simplify identity creation and utilities for fluent-bit update.)
 ```
 
 ### Sample Log Formats
