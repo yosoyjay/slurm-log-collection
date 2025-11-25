@@ -255,7 +255,7 @@ The solution monitors three main categories of components:
 | Slurm REST API | /var/log/slurm/slurmrestd.log | Scheduler | slurmrestd_raw_CL | slurmrestd_raw_dcr |
 | Job Archives | /shared/slurm-logs/* | Scheduler | slurmjobs_raw_CL | slurmjobs_raw_dcr |
 | System Logs | /var/log/syslog | All | syslog_raw_CL | syslog_raw_dcr |
-| Kernel Logs | /var/log/dmesg | Compute | dmesg_raw_CL | dmesg_raw_dcr |
+| Kernel Logs | /var/log/dmesg | All | dmesg_raw_CL | dmesg_raw_dcr |
 | CycleCloud Agent | /opt/cycle/jetpack/logs/jetpack.log | All | jetpack_raw_CL | jetpack_raw_dcr |
 | CycleCloud Daemon | /opt/cycle/jetpack/logs/jetpackd.log | All | jetpackd_raw_CL | jetpackd_raw_dcr |
 | Health Agent | /opt/healthagent/healthagent.log | Scheduler | healthagent_raw_CL | healthagent_raw_dcr |
