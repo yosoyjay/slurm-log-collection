@@ -17,6 +17,11 @@ echo "Creating Log Analytics tables in workspace: $WORKSPACE_NAME"
 echo "Resource group: $RESOURCE_GROUP"
 echo
 
+echo "Creating workspace: $WORKSPACE_NAME"
+az monitor log-analytics workspace create \
+  --resource-group $RESOURCE_GROUP \
+  --workspace-name $WORKSPACE_NAME
+
 # Function to create a table with standard raw log schema
 create_raw_table() {
     local table_name=$1

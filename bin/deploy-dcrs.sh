@@ -1,8 +1,6 @@
 #!/bin/bash
 # Azure CLI script to deploy Data Collection Rules for Slurm log collection
 # This script deploys all the DCR JSON files to Azure Monitor
-
-# Set error handling
 set -e
 
 # Check if required environment variables are set
@@ -12,12 +10,7 @@ if [ -z "$RESOURCE_GROUP" ] || [ -z "$SUBSCRIPTION_ID" ] || [ -z "$WORKSPACE_NAM
     echo "  RESOURCE_GROUP - Azure resource group name"
     echo "  SUBSCRIPTION_ID - Azure subscription ID"
     echo "  WORKSPACE_NAME - Log Analytics workspace name"
-    echo "  WORKSPACE_RESOURCE_ID - Full resource ID of the workspace"
-    echo
-    echo "Example:"
-    echo "  export RESOURCE_GROUP='your-resource-group'"
-    echo "  export SUBSCRIPTION_ID='12345678-1234-1234-1234-123456789012'"
-    echo "  export WORKSPACE_NAME='your-workspace-name'"
+    echo ""
     exit 1
 fi
 
