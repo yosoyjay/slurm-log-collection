@@ -41,10 +41,15 @@ The solution uses Azure Monitor Agent (AMA) with Data Collection Rules (DCRs) to
 
 Before starting, ensure you have:
 
-1. VM and VMSS must have a [system or user-assigned identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities-scale-sets?pivots=identity-mi-methods-azp#enable-system-assigned-managed-identity-on-an-existing-virtual-machine-scale-set) assigned otherwise Azure Monitor Agent will not work.
-    - For production deployments: It is recommended to use [user-assigned identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities-scale-sets?pivots=identity-mi-methods-azp#user-assigned-managed-identity) for Virtual Machine Scale Sets. User-assigned identities automatically propagate to individual VMs as they are dynamically created, whereas system-assigned identities must be assigned to each VM at creation time. The user-assigned identity requires the [Monitoring Metrics Publisher](https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/monitor#monitoring-metrics-publisher) role to publish logs and metrics to Azure Monitor.
-2. Azure privileges for creating DCRs and table associations must be granted ([Monitoring Contributor role](https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/monitor#monitoring-contributor)) for entity deploying the script.
-3. Environment variables must be set (see `.env` file example below).
+1. **Azure Permissions**: The deployment scripts require the following permissions:
+    - [Monitoring Contributor role](https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/monitor#monitoring-contributor) - Required to create DCRs, tables, and assign permissions
+    - Permissions to create and assign managed identities to VMs and VMSS
+    - Note: Step 1 automatically creates a user-assigned identity and Step 5 assigns the necessary [Monitoring Metrics Publisher](https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/monitor#monitoring-metrics-publisher) role
+2. **Azure Resources**: Existing Slurm cluster with:
+    - Scheduler VM
+    - Compute node VMSS
+    - Log Analytics workspace (or the scripts will create one)
+3. **Environment variables** must be set (see Environment Setup section below)
 
 ### Environment Setup
 
@@ -56,7 +61,7 @@ Before starting, ensure you have:
 
 2. **Configure environment variables** by copying and editing the `.env` file:
    ```bash
-   cp .env.example .env
+   cp env.sample .env
    # Edit .env with your Azure resource details
    source .env
    ```
@@ -71,33 +76,50 @@ Before starting, ensure you have:
 
 ### Deployment Steps
 
-#### Step 1: Install Azure Monitor Agent on VMs and VM Scale Sets that you will be collecting logs from
+#### Step 1: Create and Assign Managed Identity
+
+```bash
+bash ./bin/create-managed-identity.sh
+```
+Creates a user-assigned managed identity named "ama-monitoring-identity" and assigns it to the scheduler VM and compute VMSS. Permissions will be granted in Step 5 after DCRs are created.
+
+#### Step 2: Install Azure Monitor Agent on VMs and VM Scale Sets that you will be collecting logs from
 
 ```bash
 bash ./bin/install-azure-monitor-agent.sh
 ```
 
-#### Step 2: Create Log Analytics Tables
+#### Step 3: Create Log Analytics Tables
+
 ```bash
 bash ./bin/create-tables.sh
 ```
 Creates all required tables with standardized schema for different log types.
 
-#### Step 3: Deploy Data Collection Rules
+#### Step 4: Deploy Data Collection Rules
+
 ```bash
 bash ./bin/deploy-dcrs.sh
 ```
 Deploys DCR configurations for all log sources (Slurm, OS, CycleCloud components).
 
-#### Step 4: Associate DCRs with Resources
+#### Step 5: Assign DCR Permissions to Managed Identity
+```bash
+bash ./bin/assign-dcr-permissions.sh
+```
+Grants the managed identity the Monitoring Metrics Publisher role on each Data Collection Rule.
+
+#### Step 6: Associate DCRs with Resources
+
 ```bash
 bash ./bin/associate-dcrs.sh
 ```
 Automatically associates appropriate DCRs with scheduler VM and compute VMSS.
 
-#### Step 5: [GB200 Only] Update Fluentbit
+#### Step 7: [GB200 Only] Update Fluentbit on each GB200 node.  Assumes fluentbit has been recompiled for 64K pages and is on shared disk.
+
 ```bash
-bash ./bin/update-fluent-bit.sh
+(on-node) ./bin/update-fluent-bit.sh
 ```
 Replaces fluentbit binary with 64K page size compatible version.
 
@@ -113,6 +135,16 @@ union slurmctld_raw_CL, slurmd_raw_CL, syslog_raw_CL
 ```
 
 Expected result: Non-zero counts for active log tables.
+
+### Utility Scripts
+
+**FYI**: The repository includes a utility script for inspecting your current deployment:
+
+```bash
+bash ./bin/list-current-logging-resources.sh
+```
+
+This script lists all deployed Data Collection Rules, DCR associations with VMs/VMSS, and Log Analytics tables. Useful for troubleshooting and verifying your deployment configuration.
 
 ## Sample Queries and Use Cases
 
@@ -292,17 +324,43 @@ To create additional DCRs for custom log sources:
 
 ### GB200 Configuration
 
-Azure Batch GPU nodes with 64K page size require special fluentbit binary:
+Azure Batch GPU nodes with 64K page size require a special fluent-bit binary:
 
-1. **Build or obtain** 64K page size compatible fluentbit
-2. **Place binary** in path specified by `FLUENT_BIT_SOURCE_PATH`
-3. **Deploy to nodes** using `bin/update-fluent-bit.sh`
-4. **Automate deployment** via VMSS custom script extension
+1. **Build or obtain** a 64K page size compatible fluent-bit binary
+2. **Place binary** on a shared path accessible to all nodes (default: `/shared/fluent-bit`)
+3. **Deploy to nodes** using one of these methods:
+
+   **Option A: CycleCloud Project (Recommended for CycleCloud Clusters)**
+
+   Upload and attach the `cyclecloud-projects/slurm-log-monitoring` project to your cluster. The project:
+   - Automatically detects nodes with 64KB page size during cluster-init
+   - Updates fluent-bit binary from the configured path
+   - Default path: `/shared/fluent-bit` (configurable via `slurm-log-monitoring.fluent_bit_source_path`)
+   - See `cyclecloud-projects/slurm-log-monitoring/README.md` for detailed setup instructions
+
+   **Option B: Manual Execution**
+
+   Run `bin/update-fluent-bit.sh` directly on each node that requires the update. Useful for existing provisioned nodes or non-CycleCloud deployments.
 
 ### Directory Structure
 
 ```
 slurm-log-collection/
+├── bin/                               # Deployment scripts
+│   ├── create-managed-identity.sh     # Create and assign managed identity
+│   ├── install-azure-monitor-agent.sh # Install Azure Monitor Agent
+│   ├── create-tables.sh               # Create Log Analytics tables
+│   ├── deploy-dcrs.sh                 # Deploy all DCRs
+│   ├── assign-dcr-permissions.sh      # Assign permissions to managed identity
+│   ├── associate-dcrs.sh              # Associate DCRs with resources
+│   └── update-fluent-bit.sh           # GB200 fluentbit update
+├── cyclecloud-projects/               # CycleCloud projects
+│   └── slurm-log-monitoring/          # Auto-update fluent-bit on 64KB nodes
+│       ├── project.ini                # Project metadata
+│       ├── README.md                  # Project documentation
+│       └── specs/default/cluster-init/
+│           ├── scripts/               # Cluster-init scripts
+│           └── files/                 # Project files
 ├── bin/                               # Deployment scripts
 |   |-- install-azure-monitor-agent.sh # Install Azure Monitor Agent
 │   ├── create-tables.sh               # Create Log Analytics tables
@@ -314,52 +372,6 @@ slurm-log-collection/
 │   ├── os/                            # Operating system DCRs
 │   └── cyclecloud/                    # CycleCloud component DCRs
 ├── sample-logs/                       # Test data for validation
-├── .env.example                       # Environment variable template
+├── env.sample                         # Environment variable template
 └── README.md                          # This documentation
-```
-
-### Sample Log Formats
-
-#### Slurm Logs
-```
-[2025-09-08T21:11:35.869] debug: sched/backfill: _attempt_backfill: no jobs to backfill
-[2025-09-08T21:12:05.013] debug: sackd_mgr_dump_state: saved state of 0 nodes
-```
-
-#### System Logs
-```
-Sep  8 21:11:35 node001 kernel: [12345.678901] usb 1-1: new high-speed USB device number 2 using ehci-pci
-Sep  8 21:12:05 node001 NetworkManager[1234]: <info> device (eth0): carrier is ON
-```
-
-#### Job Archive Files
-```bash
-# job_12345.sh
-#!/bin/bash
-#SBATCH --job-name=test_job
-#SBATCH --output=output_%j.out
-#SBATCH --ntasks=1
-echo "Hello World"
-
-# job_12345.env
-SLURM_JOB_ID=12345
-SLURM_NTASKS=1
-SLURM_CPUS_PER_TASK=1
-```
-
-### KQL Parsing Patterns
-
-#### Parse Slurm Structured Logs
-```kql
-slurmctld_raw_CL
-| parse RawData with "[" Timestamp "] " Level ": " Component ": " Message
-| where isnotempty(Timestamp)
-| project TimeGenerated, Computer, Timestamp, Level, Component, Message
-```
-
-#### Parse System Logs
-```kql
-syslog_raw_CL
-| parse RawData with Timestamp " " Computer " " Process ": " Message
-| project TimeGenerated, Computer, Timestamp, Process, Message
 ```
