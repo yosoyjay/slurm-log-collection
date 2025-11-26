@@ -6,15 +6,15 @@
 set -e
 
 # Check if required environment variables are set
-if [ -z "$RESOURCE_GROUP" ] || [ -z "$WORKSPACE_NAME" ]; then
+if [ -z "$WORKSPACE_RESOURCE_GROUP" ] || [ -z "$WORKSPACE_NAME" ]; then
     echo "Error: RESOURCE_GROUP and WORKSPACE_NAME environment variables must be set"
-    echo "Example: export RESOURCE_GROUP='your-resource-group'"
+    echo "Example: export WORKSPACE_RESOURCE_GROUP='your-resource-group'"
     echo "         export WORKSPACE_NAME='your-workspace-name'"
     exit 1
 fi
 
 echo "Creating Log Analytics tables in workspace: $WORKSPACE_NAME"
-echo "Resource group: $RESOURCE_GROUP"
+echo "Resource group: $WORKSPACE_RESOURCE_GROUP"
 echo
 
 echo "Creating workspace: $WORKSPACE_NAME"
@@ -29,7 +29,7 @@ create_raw_table() {
 
     echo "Creating table: $table_name"
     az monitor log-analytics workspace table create \
-        -g "$RESOURCE_GROUP" \
+        -g "$WORKSPACE_RESOURCE_GROUP" \
         --workspace-name "$WORKSPACE_NAME" \
         --name "$table_name" \
         --plan Analytics \

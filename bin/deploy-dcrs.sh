@@ -4,10 +4,10 @@
 set -e
 
 # Check if required environment variables are set
-if [ -z "$RESOURCE_GROUP" ] || [ -z "$SUBSCRIPTION_ID" ] || [ -z "$WORKSPACE_NAME" ]; then
+if [ -z "$WORKSPACE_RESOURCE_GROUP" ] || [ -z "$SUBSCRIPTION_ID" ] || [ -z "$WORKSPACE_NAME" ]; then
     echo "Error: Required environment variables must be set"
     echo "Required variables:"
-    echo "  RESOURCE_GROUP - Azure resource group name"
+    echo "  WORKSPACE_RESOURCE_GROUP - Azure resource group name"
     echo "  SUBSCRIPTION_ID - Azure subscription ID"
     echo "  WORKSPACE_NAME - Log Analytics workspace name"
     echo ""
@@ -19,10 +19,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DCR_DIR="$SCRIPT_DIR/../data-collection-rules"
 
 # Define WORKSPACE_RESOURCE_ID
-export WORKSPACE_RESOURCE_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/{$RESOURCE_GROUP}/providers/Microsoft.OperationalInsights/workspaces/${WORKSPACE_NAME}"
+export WORKSPACE_RESOURCE_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/{$WORKSPACE_RESOURCE_GROUP}/providers/Microsoft.OperationalInsights/workspaces/${WORKSPACE_NAME}"
 
 echo "Deploying Data Collection Rules to Azure Monitor"
-echo "Resource group: $RESOURCE_GROUP"
+echo "Resource group: $WORKSPACE_RESOURCE_GROUP"
 echo "Subscription: $SUBSCRIPTION_ID"
 echo "Workspace: $WORKSPACE_NAME"
 
@@ -45,7 +45,7 @@ deploy_dcr() {
 
     # Replace placeholder values in the DCR JSON
     sed -e "s|{subscription-id}|$SUBSCRIPTION_ID|g" \
-        -e "s|{resource-group}|$RESOURCE_GROUP|g" \
+        -e "s|{resource-group}|$WORKSPACE_RESOURCE_GROUP|g" \
         -e "s|{workspace-name}|$WORKSPACE_NAME|g" \
         -e "s|{location-name}|$REGION|g" \
         -e "s|/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.OperationalInsights/workspaces/{workspace-name}|$WORKSPACE_RESOURCE_ID|g" \
@@ -53,7 +53,7 @@ deploy_dcr() {
 
     # Deploy the DCR
     az monitor data-collection rule create \
-        --resource-group "$RESOURCE_GROUP" \
+        --resource-group "$WORKSPACE_RESOURCE_GROUP" \
         --rule-file "$temp_file" \
         --name "$dcr_name" \
         --location "${REGION}"

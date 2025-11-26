@@ -69,12 +69,11 @@ Before starting, ensure you have:
    Required variables:
    - `SUBSCRIPTION_ID` - Azure subscription ID
    - `REGION` - Azure region (e.g., centralus)
-   - `RESOURCE_GROUP` - Your resource group name. Assumes all resources are in single resource group
+   - `RESOURCE_GROUP` - Your resource group name for compute nodes
+   - `WORKSPACE_RESOURCE_GROUP` - Your resource group name for Log Analytics workspace
+   - `WORKSPACE_NAME` - Log Analytics workspace name
    - `SCHEDULER_VM_NAME` - Scheduler VM name
    - `VMSS_NAME` - Compute nodes VMSS name
-   - `WORKSPACE_NAME` - Name of Log Analytics workspace where logs will be forwarded to
-
-### Deployment Steps
 
 #### Step 1: Create and Assign Managed Identity
 
@@ -90,14 +89,12 @@ bash ./bin/install-azure-monitor-agent.sh
 ```
 
 #### Step 3: Create Log Analytics Tables
-
 ```bash
 bash ./bin/create-tables.sh
 ```
 Creates all required tables with standardized schema for different log types.
 
 #### Step 4: Deploy Data Collection Rules
-
 ```bash
 bash ./bin/deploy-dcrs.sh
 ```
@@ -110,14 +107,12 @@ bash ./bin/assign-dcr-permissions.sh
 Grants the managed identity the Monitoring Metrics Publisher role on each Data Collection Rule.
 
 #### Step 6: Associate DCRs with Resources
-
 ```bash
 bash ./bin/associate-dcrs.sh
 ```
 Automatically associates appropriate DCRs with scheduler VM and compute VMSS.
 
 #### Step 7: [GB200 Only] Update Fluentbit on each GB200 node.  Assumes fluentbit has been recompiled for 64K pages and is on shared disk.
-
 ```bash
 (on-node) ./bin/update-fluent-bit.sh
 ```
