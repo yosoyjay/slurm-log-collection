@@ -1,0 +1,41 @@
+Training large AI models on hundreds or thousands of nodes introduces a critical operational challenge: when a distributed job fails, quickly identifying the root cause across scattered logs can become incredibly time-consuming.  This manual process delays recovery and reduces cluster utilization.  The ability to quickly parse centralized cluster logs from a single interface is critical to ensure job failure root cases are swiftly identified and mitigated to maintain high cluster utilization.
+
+Solution Architecture
+
+This is a turnkey, customizable log forwarding solution for CycleCloud Workspace for Slurm that centralizes all cluster logs into Azure Monitor Log Analytics.  The architecture uses Azure Monitor Agent (AMA) deployed on every VM and Virtual Machine Scale Set (VMSS) to stream logs defined by Data Collection Rules to dedicated tables in a Log Analytics workspace where they can be queried from a single interface.
+
+The turnkey solution captures three categories of logs essential for troubleshooting distributed workloads, but can be extended for any other logs:
+
+Slurm logs including slurmctld, slurmd, etc., plus archived job artifacts (job submission scripts, environment variables, stdout/stderr) collected via prolog/epilog scripts.
+
+Infrastructure logs including those from CycleCloud including the CycleCloud Healthagent which automatically tests nodes for hardware health and drains nodes that fail tests.
+
+Operating System logs from syslog and dmesg capturing kernel events, network state changes, and hardware issues.
+
+Each log source flows through its own DCR into a dedicated table following a consistent schema.  The solution automatically associates scheduler-specific DCRs with the Slurm scheduler node and compute-specific DCRs with compute nodes handling dynamic node scaling transparently.
+
+The solution is purpose-built for CycleCloud Workspace for Slurm, but designed in a modular fashion to be easily extended for new data sources (i.e. new log formats) and processing (i.e. Data Collection Rules) to support log forwarding and analysis of other required logs.
+
+Key Benefits
+
+Time-series correlation: Azure Monitor's time-based indexing enables rapid identification of cascading failures. For example, trace a network carrier flap detected in syslog to corresponding slurmd communication errors to specific job failures—all within seconds.
+
+Centralized visibility: Query logs from thousands of nodes through a single interface instead of SSH-ing to individual machines. Correlate Slurm controller decisions with node-level errors and system events in one query.
+
+Log persistence: Logs survive node deallocations and reimaging—critical in cloud environments where compute nodes are ephemeral.
+
+Powerful query language: KQL (Kusto Query Language) allows parsing raw logs into structured fields, filtering across multiple sources, and building operational dashboards. Example queries detect patterns like repeated job failures, network instability, or resource exhaustion.
+
+Production-ready scalability: User-assigned managed identities automatically propagate to new VMSS instances, and DCR associations handle thousands of nodes without manual configuration.
+
+Getting Started
+
+The complete solution is available on GitHub at https://github.com/Azure/slurm-log-collection with deployment scripts that:
+
+Create all required Log Analytics tables
+
+Deploy pre-configured DCRs for Slurm, CycleCloud, and OS logs
+
+Automatically associate DCRs with scheduler and compute resources
+
+After configuring environment variables and running the setup scripts, logs begin flowing to Azure Monitor and will populate within 15 minutes, but normal log ingestion latency is ~30s to 3 minutes.  The repository includes sample KQL queries for common troubleshooting scenarios to accelerate time-to-resolution and perform non-troubleshooting analysis of cluster usage.
