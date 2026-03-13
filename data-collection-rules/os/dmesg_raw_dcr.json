@@ -1,7 +1,7 @@
 {
   "type": "Microsoft.Insights/dataCollectionRules",
   "name": "dmesg_raw_dcr",
-  "description": "DCR for ingesting /var/log/dmesg from Linux systems",
+  "description": "DCR for ingesting /var/log/dmesg from Linux systems. Note: this file is written once at boot and is not appended to during runtime.",
   "location": "{location-name}",
   "kind": "Linux",
   "properties": {

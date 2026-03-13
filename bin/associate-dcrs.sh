@@ -8,10 +8,11 @@
 set -e
 
 # Check if required environment variables are set
-if [ -z "$RESOURCE_GROUP" ] || [ -z "$SUBSCRIPTION_ID" ] || [ -z "$VM_ID" ] || [ -z "$VMSS_ID" ]; then
+if [ -z "$RESOURCE_GROUP" ] || [ -z "$SUBSCRIPTION_ID" ] || [ -z "$VM_ID" ] || [ -z "$VMSS_ID" ] || [ -z "$WORKSPACE_RESOURCE_GROUP" ]; then
     echo "Error: Required environment variables must be set"
     echo "Required variables:"
-    echo "  RESOURCE_GROUP - Azure resource group where DCRs are deployed"
+    echo "  RESOURCE_GROUP - Azure resource group where VMs are deployed"
+    echo "  WORKSPACE_RESOURCE_GROUP - Azure resource group where DCRs are deployed"
     echo "  SUBSCRIPTION_ID - Azure subscription ID"
     echo "  VM_ID - Resource ID of the scheduler VM"
     echo "  VMSS_ID - Resource ID of the compute nodes VMSS"
@@ -30,7 +31,7 @@ VMSS_NAME=$(basename "$VMSS_ID")
 SCHEDULER_VM_NAME=$(basename "$VM_ID")
 
 echo "Associating Data Collection Rules with VMs"
-echo "DCR Resource Group: $RESOURCE_GROUP"
+echo "DCR Resource Group: $WORKSPACE_RESOURCE_GROUP"
 echo "Scheduler VM Resource Group: $VM_RESOURCE_GROUP"
 echo "VMSS Resource Group: $VMSS_RESOURCE_GROUP"
 echo "Scheduler VM ID: $VM_ID"
@@ -48,7 +49,7 @@ create_dcr_association() {
     echo "  DCR: $dcr_name"
     echo "  Description: $description"
 
-    local dcr_resource_id="/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Insights/dataCollectionRules/$dcr_name"
+    local dcr_resource_id="/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$WORKSPACE_RESOURCE_GROUP/providers/Microsoft.Insights/dataCollectionRules/$dcr_name"
 
     az monitor data-collection rule association create \
         --association-name "$association_name" \
@@ -69,7 +70,7 @@ create_dcr_association "slurmjobs_raw_dcr" "$VM_ID" "slurmjobs-${SCHEDULER_VM_NA
 
 # Scheduler + nodes DCRs (logs exist on both scheduler and nodes)
 create_dcr_association "healthagent_raw_dcr" "$VM_ID" "healthagent-${SCHEDULER_VM_NAME}-association" "CycleCloud health agent logs"
-create_dcr_association "dmesg_raw_dcr" "$VM_ID" "dmesg-${VM_NAME}-association" "Kernel logs from from scheduler"
+create_dcr_association "dmesg_raw_dcr" "$VM_ID" "dmesg-${SCHEDULER_VM_NAME}-association" "Kernel logs from scheduler"
 create_dcr_association "syslog_raw_dcr" "$VM_ID" "syslog-${SCHEDULER_VM_NAME}-association" "System logs from scheduler"
 create_dcr_association "jetpack_raw_dcr" "$VM_ID" "jetpack-${SCHEDULER_VM_NAME}-association" "CycleCloud jetpack logs from scheduler"
 create_dcr_association "jetpackd_raw_dcr" "$VM_ID" "jetpackd-${SCHEDULER_VM_NAME}-association" "CycleCloud jetpack daemon logs from scheduler"
@@ -101,6 +102,7 @@ echo "  slurmdb_raw_dcr - Slurm database logs"
 echo "  slurmrestd_raw_dcr - Slurm REST API logs"
 echo "  slurmjobs_raw_dcr - Slurm job archive logs"
 echo "  healthagent_raw_dcr - CycleCloud health agent logs"
+echo "  dmesg_raw_dcr - Kernel logs"
 echo "  syslog_raw_dcr - System logs"
 echo "  jetpack_raw_dcr - CycleCloud jetpack logs"
 echo "  jetpackd_raw_dcr - CycleCloud jetpack daemon logs"

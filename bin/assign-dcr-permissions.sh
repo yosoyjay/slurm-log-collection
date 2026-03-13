@@ -4,10 +4,11 @@
 set -e
 
 # Check if required environment variables are set
-if [ -z "$RESOURCE_GROUP" ] || [ -z "$SUBSCRIPTION_ID" ]; then
+if [ -z "$RESOURCE_GROUP" ] || [ -z "$SUBSCRIPTION_ID" ] || [ -z "$WORKSPACE_RESOURCE_GROUP" ]; then
     echo "Error: Required environment variables must be set"
     echo "Required variables:"
-    echo "  RESOURCE_GROUP - Azure resource group name"
+    echo "  RESOURCE_GROUP - Azure resource group for managed identity"
+    echo "  WORKSPACE_RESOURCE_GROUP - Azure resource group where DCRs are deployed"
     echo "  SUBSCRIPTION_ID - Azure subscription ID"
     echo ""
     exit 1
@@ -58,10 +59,10 @@ TOTAL_COUNT=${#DCR_NAMES[@]}
 for dcr_name in "${DCR_NAMES[@]}"; do
     echo "Processing DCR: $dcr_name"
 
-    DCR_RESOURCE_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Insights/dataCollectionRules/${dcr_name}"
+    DCR_RESOURCE_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${WORKSPACE_RESOURCE_GROUP}/providers/Microsoft.Insights/dataCollectionRules/${dcr_name}"
 
     # Check if DCR exists before attempting role assignment
-    if az monitor data-collection rule show --name "$dcr_name" --resource-group "$RESOURCE_GROUP" > /dev/null 2>&1; then
+    if az monitor data-collection rule show --name "$dcr_name" --resource-group "$WORKSPACE_RESOURCE_GROUP" > /dev/null 2>&1; then
         echo "  DCR exists, assigning role..."
 
         if az role assignment create \
