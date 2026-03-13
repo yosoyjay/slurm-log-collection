@@ -112,12 +112,6 @@ bash ./bin/associate-dcrs.sh
 ```
 Automatically associates appropriate DCRs with scheduler VM and compute VMSS.
 
-#### Step 7: [GB200 Only] Update Fluentbit on each GB200 node.  Assumes fluentbit has been recompiled for 64K pages and is on shared disk.
-```bash
-(on-node) ./bin/update-fluent-bit.sh
-```
-Replaces fluentbit binary with 64K page size compatible version.
-
 ### Verification
 
 Wait 15 minutes for initial log ingestion (normal ingestion latency is 30 seconds to 3 minutes), then verify in Log Analytics:
@@ -317,26 +311,6 @@ To create additional DCRs for custom log sources:
    - `dataSources.logFiles[].name` - Unique stream identifier
 3. **Deploy using**: `az monitor data-collection rule create`
 
-### GB200 Configuration
-
-Azure Batch GPU nodes with 64K page size require a special fluent-bit binary:
-
-1. **Build or obtain** a 64K page size compatible fluent-bit binary
-2. **Place binary** on a shared path accessible to all nodes (default: `/shared/fluent-bit`)
-3. **Deploy to nodes** using one of these methods:
-
-   **Option A: CycleCloud Project (Recommended for CycleCloud Clusters)**
-
-   Upload and attach the `cyclecloud-projects/slurm-log-monitoring` project to your cluster. The project:
-   - Automatically detects nodes with 64KB page size during cluster-init
-   - Updates fluent-bit binary from the configured path
-   - Default path: `/shared/fluent-bit` (configurable via `slurm-log-monitoring.fluent_bit_source_path`)
-   - See `cyclecloud-projects/slurm-log-monitoring/README.md` for detailed setup instructions
-
-   **Option B: Manual Execution**
-
-   Run `bin/update-fluent-bit.sh` directly on each node that requires the update. Useful for existing provisioned nodes or non-CycleCloud deployments.
-
 ### Directory Structure
 
 ```
@@ -348,20 +322,11 @@ slurm-log-collection/
 │   ├── deploy-dcrs.sh                 # Deploy all DCRs
 │   ├── assign-dcr-permissions.sh      # Assign permissions to managed identity
 │   ├── associate-dcrs.sh              # Associate DCRs with resources
-│   └── update-fluent-bit.sh           # GB200 fluentbit update
-├── cyclecloud-projects/               # CycleCloud projects
-│   └── slurm-log-monitoring/          # Auto-update fluent-bit on 64KB nodes
-│       ├── project.ini                # Project metadata
-│       ├── README.md                  # Project documentation
-│       └── specs/default/cluster-init/
-│           ├── scripts/               # Cluster-init scripts
-│           └── files/                 # Project files
-├── bin/                               # Deployment scripts
-|   |-- install-azure-monitor-agent.sh # Install Azure Monitor Agent
-│   ├── create-tables.sh               # Create Log Analytics tables
-│   ├── deploy-dcrs.sh                 # Deploy all DCRs
-│   ├── associate-dcrs.sh              # Associate DCRs with resources
-│   └── update-fluent-bit.sh           # GB200 fluentbit update
+│   ├── list-current-logging-resources.sh # List deployed resources
+│   └── clean-up/                      # Cleanup scripts
+├── configs/                           # Slurm prolog/epilog scripts
+│   ├── archive_slurm_job_logs.sh      # Epilog script for job output archival
+│   └── archive_slurm_job_scripts.sh   # Prolog script for job script archival
 ├── data-collection-rules/             # DCR JSON configurations
 │   ├── slurm/                         # Slurm component DCRs
 │   ├── os/                            # Operating system DCRs

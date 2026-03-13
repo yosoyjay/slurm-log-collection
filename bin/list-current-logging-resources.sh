@@ -4,10 +4,10 @@
 
 set -e
 
-if [ -z "$RESOURCE_GROUP" ] || [ -z "$WORKSPACE_NAME" ]; then
+if [ -z "$WORKSPACE_RESOURCE_GROUP" ] || [ -z "$WORKSPACE_NAME" ]; then
     echo "Error: Required environment variables must be set"
     echo "Required variables:"
-    echo "  RESOURCE_GROUP - Azure resource group name"
+    echo "  WORKSPACE_RESOURCE_GROUP - Azure resource group name for Log Analytics"
     echo "  WORKSPACE_NAME - Log Analytics workspace name"
     echo
     echo "Optional variables for association listing:"
@@ -15,7 +15,7 @@ if [ -z "$RESOURCE_GROUP" ] || [ -z "$WORKSPACE_NAME" ]; then
     echo "  VMSS_ID - Full resource ID of compute VMSS"
     echo
     echo "Example:"
-    echo "  export RESOURCE_GROUP='your-resource-group'"
+    echo "  export WORKSPACE_RESOURCE_GROUP='your-workspace-resource-group'"
     echo "  export WORKSPACE_NAME='your-workspace-name'"
     echo "  export VM_ID='/subscriptions/.../virtualMachines/scheduler-vm'"
     echo "  export VMSS_ID='/subscriptions/.../virtualMachineScaleSets/compute-vmss'"
@@ -23,7 +23,7 @@ if [ -z "$RESOURCE_GROUP" ] || [ -z "$WORKSPACE_NAME" ]; then
 fi
 
 echo "=== Current Slurm Log Collection Resources ==="
-echo "Resource Group: $RESOURCE_GROUP"
+echo "Workspace Resource Group: $WORKSPACE_RESOURCE_GROUP"
 echo "Workspace: $WORKSPACE_NAME"
 if [ -n "$VM_ID" ]; then
     echo "Scheduler VM: $VM_ID"
@@ -49,8 +49,8 @@ print_subsection() {
 
 print_section "Data Collection Rules"
 
-echo "All DCRs in resource group $RESOURCE_GROUP:"
-DCR_LIST=$(az monitor data-collection rule list -g "$RESOURCE_GROUP" --query "[].{Name:name, Location:location, Description:description}" -o table 2>/dev/null || echo "")
+echo "All DCRs in resource group $WORKSPACE_RESOURCE_GROUP:"
+DCR_LIST=$(az monitor data-collection rule list -g "$WORKSPACE_RESOURCE_GROUP" --query "[].{Name:name, Location:location, Description:description}" -o table 2>/dev/null || echo "")
 
 if [ -z "$DCR_LIST" ] || [ "$DCR_LIST" = "Name    Location    Description" ]; then
     echo "No Data Collection Rules found"
@@ -60,14 +60,14 @@ fi
 
 echo
 print_subsection "Slurm-Related DCRs"
-SLURM_DCRS=("slurmctld_raw_dcr" "slurmd_raw_dcr" "slurmdb_raw_dcr" "slurmrestd_raw_dcr" "jetpack_raw_dcr" "jetpackd_raw_dcr" "healthagent_raw_dcr" "dmesg_raw_dcr" "syslog_raw_dcr")
+SLURM_DCRS=("slurmctld_raw_dcr" "slurmd_raw_dcr" "slurmdb_raw_dcr" "slurmrestd_raw_dcr" "slurmjobs_raw_dcr" "jetpack_raw_dcr" "jetpackd_raw_dcr" "healthagent_raw_dcr" "dmesg_raw_dcr" "syslog_raw_dcr")
 
 for dcr in "${SLURM_DCRS[@]}"; do
-    DCR_EXISTS=$(az monitor data-collection rule show -g "$RESOURCE_GROUP" --name "$dcr" --query "name" -o tsv 2>/dev/null || echo "")
+    DCR_EXISTS=$(az monitor data-collection rule show -g "$WORKSPACE_RESOURCE_GROUP" --name "$dcr" --query "name" -o tsv 2>/dev/null || echo "")
     if [ -n "$DCR_EXISTS" ]; then
-        echo "✓ $dcr - EXISTS"
+        echo "[OK] $dcr - EXISTS"
     else
-        echo "✗ $dcr - NOT FOUND"
+        echo "[MISS] $dcr - NOT FOUND"
     fi
 done
 
@@ -75,7 +75,7 @@ echo
 print_section "Log Analytics Tables"
 
 echo "All custom tables in workspace $WORKSPACE_NAME:"
-TABLE_LIST=$(az monitor log-analytics workspace table list -g "$RESOURCE_GROUP" --workspace-name "$WORKSPACE_NAME" --query "[?contains(name, '_CL')].{Name:name, Plan:plan, Description:description}" -o table 2>/dev/null || echo "")
+TABLE_LIST=$(az monitor log-analytics workspace table list -g "$WORKSPACE_RESOURCE_GROUP" --workspace-name "$WORKSPACE_NAME" --query "[?contains(name, '_CL')].{Name:name, Plan:plan, Description:description}" -o table 2>/dev/null || echo "")
 
 if [ -z "$TABLE_LIST" ] || [ "$TABLE_LIST" = "Name    Plan    Description" ]; then
     echo "No custom tables found"
@@ -85,14 +85,14 @@ fi
 
 echo
 print_subsection "Slurm-Related Tables"
-SLURM_TABLES=("slurmctld_raw_CL" "slurmd_raw_CL" "slurmdb_raw_CL" "slurmrestd_raw_CL" "jetpack_raw_CL" "jetpackd_raw_CL" "healthagent_raw_CL" "dmesg_raw_CL" "syslog_raw_CL")
+SLURM_TABLES=("slurmctld_raw_CL" "slurmd_raw_CL" "slurmdb_raw_CL" "slurmrestd_raw_CL" "slurmjobs_raw_CL" "jetpack_raw_CL" "jetpackd_raw_CL" "healthagent_raw_CL" "dmesg_raw_CL" "syslog_raw_CL")
 
 for table in "${SLURM_TABLES[@]}"; do
-    TABLE_EXISTS=$(az monitor log-analytics workspace table show -g "$RESOURCE_GROUP" --workspace-name "$WORKSPACE_NAME" --name "$table" --query "name" -o tsv 2>/dev/null || echo "")
+    TABLE_EXISTS=$(az monitor log-analytics workspace table show -g "$WORKSPACE_RESOURCE_GROUP" --workspace-name "$WORKSPACE_NAME" --name "$table" --query "name" -o tsv 2>/dev/null || echo "")
     if [ -n "$TABLE_EXISTS" ]; then
-        echo "✓ $table - EXISTS"
+        echo "[OK] $table - EXISTS"
     else
-        echo "✗ $table - NOT FOUND"
+        echo "[MISS] $table - NOT FOUND"
     fi
 done
 
@@ -100,11 +100,11 @@ echo
 print_subsection "Backup Tables"
 for table in "${SLURM_TABLES[@]}"; do
     backup_table="${table%_CL}_old_CL"
-    BACKUP_EXISTS=$(az monitor log-analytics workspace table show -g "$RESOURCE_GROUP" --workspace-name "$WORKSPACE_NAME" --name "$backup_table" --query "name" -o tsv 2>/dev/null || echo "")
+    BACKUP_EXISTS=$(az monitor log-analytics workspace table show -g "$WORKSPACE_RESOURCE_GROUP" --workspace-name "$WORKSPACE_NAME" --name "$backup_table" --query "name" -o tsv 2>/dev/null || echo "")
     if [ -n "$BACKUP_EXISTS" ]; then
-        echo "✓ $backup_table - EXISTS"
+        echo "[OK] $backup_table - EXISTS"
     else
-        echo "✗ $backup_table - NOT FOUND"
+        echo "[MISS] $backup_table - NOT FOUND"
     fi
 done
 
@@ -146,9 +146,9 @@ fi
 print_section "Resource Summary"
 
 # Count existing resources
-DCR_COUNT=$(az monitor data-collection rule list -g "$RESOURCE_GROUP" --query "length([?contains(name, '_raw_dcr')])" -o tsv 2>/dev/null || echo "0")
-TABLE_COUNT=$(az monitor log-analytics workspace table list -g "$RESOURCE_GROUP" --workspace-name "$WORKSPACE_NAME" --query "length([?contains(name, '_raw_CL')])" -o tsv 2>/dev/null || echo "0")
-BACKUP_COUNT=$(az monitor log-analytics workspace table list -g "$RESOURCE_GROUP" --workspace-name "$WORKSPACE_NAME" --query "length([?contains(name, '_old_CL')])" -o tsv 2>/dev/null || echo "0")
+DCR_COUNT=$(az monitor data-collection rule list -g "$WORKSPACE_RESOURCE_GROUP" --query "length([?contains(name, '_raw_dcr')])" -o tsv 2>/dev/null || echo "0")
+TABLE_COUNT=$(az monitor log-analytics workspace table list -g "$WORKSPACE_RESOURCE_GROUP" --workspace-name "$WORKSPACE_NAME" --query "length([?contains(name, '_raw_CL')])" -o tsv 2>/dev/null || echo "0")
+BACKUP_COUNT=$(az monitor log-analytics workspace table list -g "$WORKSPACE_RESOURCE_GROUP" --workspace-name "$WORKSPACE_NAME" --query "length([?contains(name, '_old_CL')])" -o tsv 2>/dev/null || echo "0")
 
 VM_ASSOC_COUNT=0
 VMSS_ASSOC_COUNT=0

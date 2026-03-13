@@ -4,12 +4,13 @@
 set -e
 
 # Check if required environment variables are set
-if [ -z "$WORKSPACE_RESOURCE_GROUP" ] || [ -z "$SUBSCRIPTION_ID" ] || [ -z "$WORKSPACE_NAME" ]; then
+if [ -z "$WORKSPACE_RESOURCE_GROUP" ] || [ -z "$SUBSCRIPTION_ID" ] || [ -z "$WORKSPACE_NAME" ] || [ -z "$REGION" ]; then
     echo "Error: Required environment variables must be set"
     echo "Required variables:"
     echo "  WORKSPACE_RESOURCE_GROUP - Azure resource group name"
     echo "  SUBSCRIPTION_ID - Azure subscription ID"
     echo "  WORKSPACE_NAME - Log Analytics workspace name"
+    echo "  REGION - Azure region (e.g., centralus)"
     echo ""
     exit 1
 fi
@@ -19,7 +20,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DCR_DIR="$SCRIPT_DIR/../data-collection-rules"
 
 # Define WORKSPACE_RESOURCE_ID
-export WORKSPACE_RESOURCE_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/{$WORKSPACE_RESOURCE_GROUP}/providers/Microsoft.OperationalInsights/workspaces/${WORKSPACE_NAME}"
+export WORKSPACE_RESOURCE_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${WORKSPACE_RESOURCE_GROUP}/providers/Microsoft.OperationalInsights/workspaces/${WORKSPACE_NAME}"
 
 echo "Deploying Data Collection Rules to Azure Monitor"
 echo "Resource group: $WORKSPACE_RESOURCE_GROUP"
@@ -33,7 +34,7 @@ deploy_dcr() {
     local description=$3
 
     if [ ! -f "$dcr_file" ]; then
-        echo "❌ DCR file not found: $dcr_file"
+        echo "[FAIL] DCR file not found: $dcr_file"
         return 1
     fi
 
@@ -48,7 +49,6 @@ deploy_dcr() {
         -e "s|{resource-group}|$WORKSPACE_RESOURCE_GROUP|g" \
         -e "s|{workspace-name}|$WORKSPACE_NAME|g" \
         -e "s|{location-name}|$REGION|g" \
-        -e "s|/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.OperationalInsights/workspaces/{workspace-name}|$WORKSPACE_RESOURCE_ID|g" \
         "$dcr_file" > "$temp_file"
 
     # Deploy the DCR
@@ -61,7 +61,7 @@ deploy_dcr() {
     # Clean up temp file
     rm "$temp_file"
 
-    echo "✓ Successfully deployed: $dcr_name"
+    echo "[OK] Successfully deployed: $dcr_name"
     echo
 }
 
