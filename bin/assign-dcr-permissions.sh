@@ -65,15 +65,29 @@ for dcr_name in "${DCR_NAMES[@]}"; do
     if az monitor data-collection rule show --name "$dcr_name" --resource-group "$WORKSPACE_RESOURCE_GROUP" > /dev/null 2>&1; then
         echo "  DCR exists, assigning role..."
 
-        if az role assignment create \
-            --assignee "$PRINCIPAL_ID" \
+        # Use --assignee-object-id (+ principal type) rather than --assignee.
+        # --assignee resolves the principal through Microsoft Graph, which fails
+        # in tenants with a token-protection / conditional-access policy
+        # (AADSTS530084). The object-id form skips Graph entirely. Do NOT swallow
+        # stderr here: a swallowed error previously hid a 0/10 failure behind a
+        # "10 successful" summary.
+        az role assignment create \
+            --assignee-object-id "$PRINCIPAL_ID" \
+            --assignee-principal-type ServicePrincipal \
             --role "Monitoring Metrics Publisher" \
-            --scope "$DCR_RESOURCE_ID" 2>/dev/null; then
-            echo "  Successfully assigned role to $dcr_name"
+            --scope "$DCR_RESOURCE_ID"
+
+        # Verify with an independent ARM read instead of trusting the create exit
+        # code (create is idempotent and may "succeed" without a durable result).
+        if az role assignment list \
+            --assignee-object-id "$PRINCIPAL_ID" \
+            --scope "$DCR_RESOURCE_ID" \
+            --role "Monitoring Metrics Publisher" \
+            --query "[0].id" -o tsv | grep -q .; then
+            echo "  Verified role assignment on $dcr_name"
             SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
         else
-            echo "  Warning: Role assignment failed or already exists for $dcr_name"
-            SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+            echo "  ERROR: role assignment NOT present on $dcr_name after create"
         fi
     else
         echo "  Warning: DCR '$dcr_name' not found, skipping"
@@ -86,7 +100,12 @@ echo "=== DCR Permission Assignment Complete ==="
 echo ""
 echo "Summary:"
 echo "  Total DCRs processed: $TOTAL_COUNT"
-echo "  Successful assignments: $SUCCESS_COUNT"
+echo "  Verified assignments: $SUCCESS_COUNT / $TOTAL_COUNT"
 echo "  Identity: $IDENTITY_NAME"
 echo "  Role: Monitoring Metrics Publisher"
 echo ""
+
+if [ "$SUCCESS_COUNT" -ne "$TOTAL_COUNT" ]; then
+    echo "ERROR: $((TOTAL_COUNT - SUCCESS_COUNT)) DCR(s) are missing the role assignment."
+    exit 1
+fi
